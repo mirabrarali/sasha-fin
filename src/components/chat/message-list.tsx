@@ -60,8 +60,6 @@ export type Message = {
       }[];
     }
   };
-  suggestedPrompts?: string[];
-  isDemoPrompt?: boolean;
 };
 
 interface MessageListProps {
@@ -339,5 +337,3 @@ function GeneratedChart({ chart }: { chart: NonNullable<Message['chart']> }) {
     </Card>
   );
 }
-
-    
