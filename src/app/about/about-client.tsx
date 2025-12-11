@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { MessageCircle, Sheet, BookOpen, Rocket, Wand, ListChecks, BrainCircuit, Bot, ShieldCheck, LineChart, FileCheck as FileCheckIcon, Briefcase, BarChart3, Clock, Eye } from 'lucide-react';
+import { MessageCircle, Sheet, BookOpen, Rocket, Wand, ListChecks, BrainCircuit, Bot, ShieldCheck, LineChart, FileCheck as FileCheckIcon, Briefcase, BarChart3, Clock } from 'lucide-react';
 import { LanguageToggle } from '@/components/language-toggle';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useLanguage } from '@/context/language-context';
@@ -20,12 +20,6 @@ export default function AboutPageClient() {
       icon: MessageCircle,
       title: t('learnChatTitle'),
       description: t('learnChatDesc'),
-      availability: t('chatAvailability')
-    },
-    {
-      icon: Eye,
-      title: t('abdullahVisionTitle'),
-      description: t('learnAbdullahVisionDesc'),
       availability: t('chatAvailability')
     },
     {

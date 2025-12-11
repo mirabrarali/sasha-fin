@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
-import { CornerDownLeft, Mic, FileUp, FileText, XCircle, Loader2, Eye, RefreshCw } from 'lucide-react';
+import { CornerDownLeft, Mic, FileUp, FileText, XCircle, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -682,17 +682,6 @@ export default function ChatPageClient() {
                             <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv,.xlsx" className="hidden" />
                             <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} accept="application/pdf" className="hidden" />
                             <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                <Button type="button" variant="ghost" size="icon" className="h-9 w-9" asChild>
-                                    <Link href="/abdullah-vision">
-                                      <Eye className="w-5 h-5" />
-                                      <span className="sr-only">{t('abdullahVisionTitle')}</span>
-                                    </Link>
-                                </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>{t('abdullahVisionTitle')}</TooltipContent>
-                            </Tooltip>
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                 <Button type="button" variant="ghost" size="icon" className="h-9 w-9" onClick={() => fileInputRef.current?.click()}>

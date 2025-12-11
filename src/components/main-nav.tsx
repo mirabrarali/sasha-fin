@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageCircle, Sheet as SheetIcon, BookOpen, BarChart3, GraduationCap, BrainCircuit, Eye } from 'lucide-react';
+import { MessageCircle, Sheet as SheetIcon, BookOpen, BarChart3, GraduationCap, BrainCircuit } from 'lucide-react';
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from '@/components/ui/sidebar';
 import { useLanguage } from '@/context/language-context';
 
@@ -25,14 +25,6 @@ export function MainNav() {
           <Link href="/chat" onClick={handleLinkClick}>
             <MessageCircle />
             <span>{t('chatTitle')}</span>
-          </Link>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-       <SidebarMenuItem>
-        <SidebarMenuButton asChild isActive={pathname.startsWith('/abdullah-vision')}>
-          <Link href="/abdullah-vision" onClick={handleLinkClick}>
-            <Eye />
-            <span>{t('abdullahVisionTitle')}</span>
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
