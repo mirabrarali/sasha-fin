@@ -19,7 +19,6 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     placeholder: "Message Abdullah...",
     uploadCsvTooltip: "Upload Loan CSV/XLSX",
     uploadPdfTooltip: "Upload Financial PDF",
-    micTooltip: "Use Microphone",
     sendSr: "Send",
     analyzingFile: "Context: {{fileName}}",
     clearPdfTooltip: "Clear PDF from session",
@@ -71,9 +70,6 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     revenue: "Revenue",
     netIncome: "Net Income",
     pdfGenerationError: "Could not generate the PDF report.",
-    maintenanceMessage: "Services are undergoing maintenance and major upgrades. Time remaining: {{time}}",
-    ttsReadAloud: "Read Aloud",
-    ttsStop: "Stop",
     
     devToolsTitle: "Access Denied",
     devToolsDescription: "For your security and the protection of our proprietary systems, access to developer tools is restricted on this application.",
@@ -89,7 +85,6 @@ const translations: { [key in Language]: { [key: string]: string } } = {
 
     // Abdullah Status
     abdullahStatusOnline: 'Online',
-    abdullahStatusOffline: 'Offline',
     
     // Nav
     chatTitle: 'Chat',
@@ -172,7 +167,6 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     placeholder: "راسل عبدالله...",
     uploadCsvTooltip: "تحميل ملف CSV/XLSX للقروض",
     uploadPdfTooltip: "تحميل ملف PDF مالي",
-    micTooltip: "استخدام الميكروفون",
     sendSr: "إرسال",
     analyzingFile: "السياق: {{fileName}}",
     clearPdfTooltip: "مسح ملف PDF من الجلسة",
@@ -224,9 +218,6 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     revenue: "الإيرادات",
     netIncome: "صافي الدخل",
     pdfGenerationError: "تعذر إنشاء تقرير PDF.",
-    maintenanceMessage: "تخضع الخدمات للصيانة والتحديثات الرئيسية. الوقت المتبقي: {{time}}",
-    ttsReadAloud: "اقرأ بصوت عالٍ",
-    ttsStop: "إيقاف",
 
     devToolsTitle: "الوصول مرفوض",
     devToolsDescription: "لأمانك وحماية أنظمتنا الخاصة، الوصول إلى أدوات المطورين مقيد في هذا التطبيق.",
@@ -242,7 +233,6 @@ const translations: { [key in Language]: { [key: string]: string } } = {
 
     // Abdullah Status
     abdullahStatusOnline: 'متصل',
-    abdullahStatusOffline: 'غير متصل',
 
     // Nav
     chatTitle: 'الدردشة',
@@ -374,5 +364,3 @@ export function useLanguage() {
   }
   return context;
 }
-
-    
