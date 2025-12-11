@@ -32,6 +32,8 @@ const APP_NAME = 'Abdullah Banking';
 const APP_DESCRIPTION = 'Your intelligent banking assistant and financial strategist.';
 const APP_URL = new URL('https://sasha-banking-app.vercel.app'); // Replace with your actual production URL
 
+const botIcon = `data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>`;
+
 export const metadata: Metadata = {
   metadataBase: APP_URL,
   title: {
@@ -68,9 +70,9 @@ export const metadata: Metadata = {
     images: ['/sasha-og.png'],
   },
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png',
+    icon: botIcon,
+    shortcut: botIcon,
+    apple: botIcon,
   },
 };
 
