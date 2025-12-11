@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend } from 'recharts';
@@ -35,7 +36,7 @@ export function FinancialReportChart({ data, revenueLabel, netIncomeLabel, isAni
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={data} margin={{ top: 5, right: 20, left: 20, bottom: 5 }} isAnimationActive={isAnimationActive}>
+          <BarChart data={data} margin={{ top: 5, right: 20, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
             <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={formatCurrency} />
@@ -49,8 +50,8 @@ export function FinancialReportChart({ data, revenueLabel, netIncomeLabel, isAni
               cursor={{ fill: 'hsl(var(--accent))' }}
             />
             <Legend wrapperStyle={{fontSize: "12px", paddingTop: "10px"}} />
-            <Bar dataKey="revenue" fill="hsl(var(--chart-1))" name={revenueLabel} radius={[4, 4, 0, 0]} />
-            <Bar dataKey="netIncome" fill="hsl(var(--chart-2))" name={netIncomeLabel} radius={[4, 4, 0, 0]} />
+            <Bar dataKey="revenue" fill="hsl(var(--chart-1))" name={revenueLabel} radius={[4, 4, 0, 0]} isAnimationActive={isAnimationActive} />
+            <Bar dataKey="netIncome" fill="hsl(var(--chart-2))" name={netIncomeLabel} radius={[4, 4, 0, 0]} isAnimationActive={isAnimationActive} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
