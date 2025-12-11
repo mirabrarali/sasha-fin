@@ -1,13 +1,13 @@
 
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import NextImage from 'next/image';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { AbdullahAvatar } from '@/components/abdullah-avatar';
-import { User, Download, Loader2, BarChart, PieChart, Volume2, Square } from 'lucide-react';
+import { User, Download, Loader2, BarChart, PieChart } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -73,20 +73,10 @@ interface MessageListProps {
 
 export function MessageList({ messages, isLoading, onDownloadLoanPdf, onDownloadFinancialReportPdf }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [nowPlaying, setNowPlaying] = useState<string | null>(null);
   
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
-
-  useEffect(() => {
-    // Clean up speech synthesis on component unmount or when dependencies change
-    return () => {
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
-    };
-  }, [messages]);
 
   return (
     <ScrollArea className="h-full">
@@ -97,8 +87,6 @@ export function MessageList({ messages, isLoading, onDownloadLoanPdf, onDownload
             message={message} 
             onDownloadLoanPdf={onDownloadLoanPdf}
             onDownloadFinancialReportPdf={onDownloadFinancialReportPdf}
-            nowPlaying={nowPlaying}
-            setNowPlaying={setNowPlaying}
           />
         ))}
         {isLoading && <TypingIndicator />}
@@ -112,69 +100,14 @@ function ChatMessage({
   message, 
   onDownloadLoanPdf,
   onDownloadFinancialReportPdf,
-  nowPlaying,
-  setNowPlaying,
 }: { 
   message: Message, 
   onDownloadLoanPdf: (report: Message['analysisReport']) => void; 
   onDownloadFinancialReportPdf: (report: Message['financialReport']) => void;
-  nowPlaying: string | null;
-  setNowPlaying: (id: string | null) => void;
 }) {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const isAssistant = message.role === 'assistant';
-  const isPlaying = nowPlaying === message.id;
 
-  const handleTextToSpeech = () => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) {
-      alert('Text-to-speech is not supported in your browser.');
-      return;
-    }
-    
-    if (isPlaying) {
-      window.speechSynthesis.cancel();
-      setNowPlaying(null);
-      return;
-    }
-
-    if (nowPlaying) {
-      window.speechSynthesis.cancel();
-    }
-
-    const utterance = new SpeechSynthesisUtterance(message.content);
-    utterance.lang = language === 'ar' ? 'ar-SA' : 'en-US';
-
-    const voices = window.speechSynthesis.getVoices();
-    let selectedVoice = voices.find(
-      (voice) =>
-        voice.lang.startsWith(language) && /female/i.test(voice.name)
-    );
-
-    // Fallback if no female voice is found
-    if (!selectedVoice) {
-      selectedVoice = voices.find((voice) => voice.lang.startsWith(language));
-    }
-    
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-    }
-
-    utterance.onstart = () => {
-      setNowPlaying(message.id);
-    };
-
-    utterance.onend = () => {
-      setNowPlaying(null);
-    };
-
-    utterance.onerror = (e) => {
-      console.error('Speech synthesis error', e);
-      setNowPlaying(null);
-    };
-    
-    window.speechSynthesis.speak(utterance);
-  };
-  
   return (
     <div
       className={cn('flex items-start gap-3 sm:gap-4 animate-in fade-in', {
@@ -194,19 +127,6 @@ function ChatMessage({
             )}
           >
             <p className="whitespace-pre-wrap">{message.content}</p>
-            {isAssistant && message.content.length > 1 && (
-                <div className="mt-2 pt-2 border-t border-primary-foreground/20 flex justify-end">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10"
-                        onClick={handleTextToSpeech}
-                    >
-                        {isPlaying ? <Square className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                        <span className="sr-only">{isPlaying ? t('ttsStop') : t('ttsReadAloud')}</span>
-                    </Button>
-                </div>
-            )}
           </div>
         )}
         

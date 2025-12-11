@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
-import { CornerDownLeft, Mic, FileUp, FileText, XCircle, Loader2, RefreshCw, UploadCloud, Mail, Phone, Volume2, Square } from 'lucide-react';
+import { CornerDownLeft, FileUp, FileText, XCircle, Loader2, RefreshCw, UploadCloud, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -32,14 +32,6 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { AbdullahStatus } from '@/components/abdullah-status';
 import { cn } from '@/lib/utils';
 
-
-// Add this interface to fix the TypeScript error for SpeechRecognition
-declare global {
-  interface Window {
-    SpeechRecognition: any;
-    webkitSpeechRecognition: any;
-  }
-}
 
 const generateAndDownloadPdf = async (element: HTMLElement, fileName: string) => {
     try {
@@ -113,62 +105,7 @@ export default function ChatPageClient() {
   const [isDragging, setIsDragging] = useState(false);
   const [isDragValid, setIsDragValid] = useState(true);
 
-  const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
   
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (SpeechRecognition) {
-            const recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.onresult = (event: any) => {
-                let interimTranscript = '';
-                let finalTranscript = '';
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
-                    }
-                }
-                setInput(finalTranscript + interimTranscript);
-            };
-            recognition.onerror = (event: any) => {
-                console.error('Speech recognition error', event.error);
-                toast({
-                  variant: 'destructive',
-                  title: 'Speech Recognition Error',
-                  description: event.error === 'not-allowed' ? 'Microphone access was denied.' : 'An error occurred during speech recognition.'
-                });
-                setIsListening(false);
-            };
-            recognition.onend = () => {
-                setIsListening(false);
-            };
-            recognitionRef.current = recognition;
-        } else {
-            console.warn('Speech Recognition not supported in this browser.');
-        }
-    }
-  }, [toast]);
-
-  const toggleListening = () => {
-      if (isListening) {
-          recognitionRef.current?.stop();
-          setIsListening(false);
-      } else {
-          if (recognitionRef.current) {
-              recognitionRef.current.lang = language === 'ar' ? 'ar-SA' : 'en-US';
-              recognitionRef.current.start();
-              setIsListening(true);
-          } else {
-              toast({ variant: 'destructive', title: 'Unsupported Browser', description: 'Speech recognition is not supported by your browser.' });
-          }
-      }
-  };
-
   const handleDragEvents = useCallback((e: DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -831,7 +768,7 @@ export default function ChatPageClient() {
                           value={input}
                           onChange={(e) => setInput(e.target.value)}
                           placeholder={t('placeholder')}
-                          className="pr-40 sm:pr-48 md:pr-56 py-3 text-base resize-none"
+                          className="pr-28 sm:pr-32 md:pr-36 py-3 text-base resize-none"
                           onKeyDown={(e) => {
                               if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
@@ -861,15 +798,6 @@ export default function ChatPageClient() {
                                 </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>{t('uploadPdfTooltip')}</TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                <Button type="button" variant="ghost" size="icon" className={cn("h-9 w-9", isListening && "text-blue-500 shadow-inner shadow-blue-400/50")} onClick={toggleListening}>
-                                    <Mic className="w-5 h-5" />
-                                    <span className="sr-only">{t('micTooltip')}</span>
-                                </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>{t('micTooltip')}</TooltipContent>
                             </Tooltip>
                             </TooltipProvider>
                             <Button type="submit" size="sm" className="h-9" disabled={isLoading || !input.trim()}>
@@ -947,3 +875,5 @@ export default function ChatPageClient() {
     </div>
   );
 }
+
+    
