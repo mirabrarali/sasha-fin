@@ -419,3 +419,5 @@ function GeneratedChart({ chart }: { chart: NonNullable<Message['chart']> }) {
     </Card>
   );
 }
+
+    

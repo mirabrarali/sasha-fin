@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
-import { CornerDownLeft, Mic, FileUp, FileText, XCircle, Loader2, RefreshCw, UploadCloud, Mail, Phone } from 'lucide-react';
+import { CornerDownLeft, Mic, FileUp, FileText, XCircle, Loader2, RefreshCw, UploadCloud, Mail, Phone, Volume2, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -36,6 +36,7 @@ import { cn } from '@/lib/utils';
 // Add this interface to fix the TypeScript error for SpeechRecognition
 declare global {
   interface Window {
+    SpeechRecognition: any;
     webkitSpeechRecognition: any;
   }
 }
@@ -122,7 +123,7 @@ export default function ChatPageClient() {
             const recognition = new SpeechRecognition();
             recognition.continuous = true;
             recognition.interimResults = true;
-            recognition.onresult = (event) => {
+            recognition.onresult = (event: any) => {
                 let interimTranscript = '';
                 let finalTranscript = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -134,7 +135,7 @@ export default function ChatPageClient() {
                 }
                 setInput(finalTranscript + interimTranscript);
             };
-            recognition.onerror = (event) => {
+            recognition.onerror = (event: any) => {
                 console.error('Speech recognition error', event.error);
                 toast({
                   variant: 'destructive',
@@ -330,7 +331,7 @@ export default function ChatPageClient() {
         setMessages(prev => [...prev, analysisMessage]);
 
       } else {
-        const historyForApi = newMessages.map(({ id, analysisReport, financialReport, imageUrl, chart, ...rest }) => rest);
+        const historyForApi = newMessages.map(({ id, analysisReport, financialReport, imageUrl, chart, suggestedPrompts, isDemoPrompt, ...rest }) => rest);
         const response = await chat({ history: historyForApi, pdfDataUri: pdfData, csvData: csvData, language });
         
         const botResponse: Message = {
@@ -946,3 +947,5 @@ export default function ChatPageClient() {
     </div>
   );
 }
+
+    
