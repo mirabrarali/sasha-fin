@@ -75,6 +75,10 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     ttsReadAloud: "Read Aloud",
     ttsStop: "Stop",
     
+    devToolsTitle: "Access Denied",
+    devToolsDescription: "For your security and the protection of our proprietary systems, access to developer tools is restricted on this application.",
+    devToolsMessage: "Welcome to Abdullah Banking. For security reasons, developer features are disabled. If you need assistance, please contact support.",
+
     newSessionButton: "New Session",
     newSessionTitle: "New Session Started",
     newSessionDesc: "Your chat has been cleared.",
@@ -223,6 +227,10 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     maintenanceMessage: "تخضع الخدمات للصيانة والتحديثات الرئيسية. الوقت المتبقي: {{time}}",
     ttsReadAloud: "اقرأ بصوت عالٍ",
     ttsStop: "إيقاف",
+
+    devToolsTitle: "الوصول مرفوض",
+    devToolsDescription: "لأمانك وحماية أنظمتنا الخاصة، الوصول إلى أدوات المطورين مقيد في هذا التطبيق.",
+    devToolsMessage: "أهلاً بك في عبدالله المصرفية. لأسباب أمنية، ميزات المطورين معطلة. إذا كنت بحاجة إلى مساعدة، يرجى الاتصال بالدعم.",
     
     newSessionButton: "جلسة جديدة",
     newSessionTitle: "بدأت جلسة جديدة",
