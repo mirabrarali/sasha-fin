@@ -73,35 +73,11 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     pdfGenerationError: "Could not generate the PDF report.",
     maintenanceMessage: "Services are undergoing maintenance and major upgrades. Time remaining: {{time}}",
     
-    // Abdullah Vision
-    abdullahVisionTitle: "Abdullah Vision",
-    abdullahVisionDesc: "A creative space to generate and enhance images using AI.",
-    textToImageTitle: "Text-to-Image",
-    imageEnhancementTitle: "Image Enhancement",
-    promptLabel: "Prompt",
-    promptPlaceholder: "e.g., A photorealistic image of a cat wearing a small hat, sitting in a library",
-    generateButton: "Generate",
-    generatingMessage: "Abdullah is creating your image...",
-    uploadButton: "Upload Image",
-    upscaleButton: "Upscale Image",
-    upscalingMessage: "Abdullah is enhancing your image...",
-    resultTitle: "Result",
-    noResult: "Your generated or enhanced image will appear here.",
-    imageGenFailedTitle: "Image Generation Failed",
-    imageGenFailedDesc: "Sorry, I couldn't create an image at this time. Please try again later.",
-    imageUpscaleFailedTitle: "Image Upscaling Failed",
-    imageUpscaleFailedDesc: "Sorry, I couldn't enhance the image. Please ensure it's a valid format and try again.",
-    downloadButton: "Download",
-    startOver: "Start Over",
-
     newSessionButton: "New Session",
     newSessionTitle: "New Session Started",
     newSessionDesc: "Your chat has been cleared.",
-    newSessionDescSpreadsheet: "Your spreadsheet and chat have been cleared.",
-    newSessionDescDA: "Your data analysis dashboard has been cleared.",
     newSessionConfirmTitle: "Are you sure?",
     newSessionConfirmDescChat: "This will clear your entire chat history and remove any uploaded files. This action cannot be undone.",
-    newSessionConfirmDescSpreadsheet: "This will clear your entire spreadsheet, including data and charts, and reset the chat. This action cannot be undone.",
     newSessionConfirmButton: "Start New Session",
 
     // Abdullah Status
@@ -111,9 +87,6 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     // Nav
     chatTitle: 'Chat',
     aboutTitle: 'Enterprise',
-    spreadsheetTitle: 'Spreadsheet',
-    spreadsheetGuideTitle: 'Spreadsheet Guide',
-    dataAnalyticsTitle: 'Data Analytics',
     knowledgeBaseTitle: 'Knowledge Base',
     
     // Enterprise Page (New About Page)
@@ -125,30 +98,29 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     enterpriseCorePitchP2: "Leverage this power to accelerate due diligence, enhance credit risk modeling, and provide your teams with a strategic co-pilot for high-stakes decision-making.",
     enterpriseCapabilitiesTitle: "A Suite of Powerful, Integrated Capabilities",
     capabilityAnalysisTitle: "Deep Financial Analysis",
-    capabilityAnalysisDesc: "Perform forensic analysis on financial statements (P&L, Balance Sheet, Cash Flow) to evaluate financial health, creditworthiness, and identify red flags.",
+    capabilityAnalysisDesc: "Perform forensic analysis on financial statements (P&L, Balance Sheet, Cash Flow) to evaluate financial health, creditworthiness, and identify red flags. Abdullah can process years of financial data in seconds to provide a comprehensive overview.",
     capabilityDocIntelTitle: "Intelligent Document Processing",
-    capabilityDocIntelDesc: "Extract, analyze, and query data from unstructured documents like PDFs, reports, and contracts using natural language.",
+    capabilityDocIntelDesc: "Instantly extract, analyze, and query data from unstructured documents like PDFs, annual reports, and legal contracts using natural language. Ask complex questions and get precise answers, complete with citations.",
     capabilityRiskTitle: "Predictive Risk & Trend Modeling",
-    capabilityRiskDesc: "Utilize AI-driven models to forecast financial trajectories, predict credit scores, and identify emerging market trends from your proprietary data.",
+    capabilityRiskDesc: "Utilize AI-driven models to forecast financial trajectories, predict credit scores with high accuracy, and identify emerging market trends from your proprietary data, with specific tuning for Middle Eastern markets.",
     capabilityDataTitle: "Agentic Data Analysis",
-    capabilityDataDesc: "Go beyond dashboards. Command Abdullah to perform complex data operations, create ad-hoc visualizations, and answer deep questions about your data.",
+    capabilityDataDesc: "Go beyond static dashboards. Command Abdullah to perform complex data operations, create ad-hoc visualizations, and answer deep, multi-dimensional questions about your data in a conversational interface.",
     capabilityBilingualTitle: "Bilingual & Region-Aware",
-    capabilityBilingualDesc: "Fully fluent in both Arabic and English, with a nuanced understanding of Middle Eastern financial regulations and market context.",
+    capabilityBilingualDesc: "Fully fluent in both Arabic and English, with a nuanced understanding of GCC financial regulations, cultural context, and market-specific terminology, ensuring accurate and relevant analysis.",
     capabilityKnowledgeTitle: "Customizable Knowledge Base",
-    capabilityKnowledgeDesc: "Securely augment Abdullah's core knowledge with your institution's specific rules, policies, and proprietary data for tailored analysis.",
+    capabilityKnowledgeDesc: "Securely augment Abdullah's core knowledge with your institution's specific rules, internal policies, and proprietary data for analysis that is perfectly tailored to your operational framework.",
 
     enterpriseDeploymentTitle: "Enterprise-Grade Deployment & Security",
     deploymentSecurityTitle: "Uncompromising Security",
-    deploymentSecurityDesc: "Your data is your most valuable asset. Abdullah is built on a private architecture with end-to-end encryption. Your data is never used for external training.",
+    deploymentSecurityDesc: "Your data is your most valuable asset. Abdullah is built on a private-first architecture with end-to-end encryption. Your proprietary data is never used for external model training, guaranteed.",
     deploymentOnPremTitle: "On-Premise & Private Cloud",
-    deploymentOnPremDesc: "Maintain full control over your data. Abdullah can be deployed on your own infrastructure, ensuring compliance with the strictest data residency and security policies.",
+    deploymentOnPremDesc: "Maintain full control over your data and compute. Abdullah can be deployed on your own infrastructure or private cloud, ensuring compliance with the strictest data residency and security policies (e.g., SAMA, CBUAE).",
     deploymentDataTitle: "Flexible Licensing & Integration",
-    deploymentDataDesc: "We offer tailored licensing models to fit your organization's needs, with robust API access for seamless integration into your existing workflows and systems.",
+    deploymentDataDesc: "We offer tailored licensing models, from per-seat to full enterprise, to fit your organization's needs. Robust API access allows for seamless integration into your existing CRM, ERP, and internal banking platforms.",
     
     enterpriseCtaTitle: "Ready to Transform Your Financial Intelligence?",
-    enterpriseCtaDesc: "Discover how Abdullah can empower your organization to make faster, smarter decisions. Schedule a private demo with our team to see the platform in action.",
+    enterpriseCtaDesc: "Discover how Abdullah can empower your organization to make faster, smarter decisions with unparalleled data-driven insights. Schedule a private demo with our enterprise team to see the platform in action.",
     enterpriseCtaButton: "Request a Demo",
-
   },
   ar: {
     pageTitle: 'عبدالله المصرفية',
@@ -210,35 +182,11 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     pdfGenerationError: "تعذر إنشاء تقرير PDF.",
     maintenanceMessage: "تخضع الخدمات للصيانة والتحديثات الرئيسية. الوقت المتبقي: {{time}}",
     
-    // Abdullah Vision
-    abdullahVisionTitle: "رؤية عبدالله",
-    abdullahVisionDesc: "مساحة إبداعية لإنشاء الصور وتحسينها باستخدام الذكاء الاصطناعي.",
-    textToImageTitle: "نص إلى صورة",
-    imageEnhancementTitle: "تحسين الصور",
-    promptLabel: "الموجه",
-    promptPlaceholder: "مثال: صورة واقعية لقطة ترتدي قبعة صغيرة، تجلس في مكتبة",
-    generateButton: "إنشاء",
-    generatingMessage: "عبدالله ينشئ صورتك...",
-    uploadButton: "تحميل صورة",
-    upscaleButton: "تحسين الصورة",
-    upscalingMessage: "عبدالله يقوم بتحسين صورتك...",
-    resultTitle: "النتيجة",
-    noResult: "ستظهر صورتك المنشأة أو المحسنة هنا.",
-    imageGenFailedTitle: "فشل إنشاء الصورة",
-    imageGenFailedDesc: "عذرًا، لم أتمكن من إنشاء صورة في هذا الوقت. يرجى المحاولة مرة أخرى لاحقًا.",
-    imageUpscaleFailedTitle: "فشل تحسين الصورة",
-    imageUpscaleFailedDesc: "عذرًا، لم أتمكن من تحسين الصورة. يرجى التأكد من أنها بتنسيق صالح والمحاولة مرة أخرى.",
-    downloadButton: "تنزيل",
-    startOver: "البدء من جديد",
-    
     newSessionButton: "جلسة جديدة",
     newSessionTitle: "بدأت جلسة جديدة",
     newSessionDesc: "تم مسح محادثتك.",
-    newSessionDescSpreadsheet: "تم مسح جدول البيانات والدردشة.",
-    newSessionDescDA: "تم مسح لوحة معلومات تحليل البيانات الخاصة بك.",
     newSessionConfirmTitle: "هل أنت متأكد؟",
     newSessionConfirmDescChat: "سيؤدي هذا إلى مسح سجل الدردشة بالكامل وإزالة أي ملفات تم تحميلها. لا يمكن التراجع عن هذا الإجراء.",
-    newSessionConfirmDescSpreadsheet: "سيؤدي هذا إلى مسح جدول البيانات بالكامل، بما في ذلك البيانات والمخططات، وإعادة تعيين الدردشة. لا يمكن التراجع عن هذا الإجراء.",
     newSessionConfirmButton: "بدء جلسة جديدة",
 
     // Abdullah Status
@@ -248,9 +196,6 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     // Nav
     chatTitle: 'الدردشة',
     aboutTitle: 'للمؤسسات',
-    spreadsheetTitle: 'جدول البيانات',
-    spreadsheetGuideTitle: 'دليل جدول البيانات',
-    dataAnalyticsTitle: 'تحليل البيانات',
     knowledgeBaseTitle: 'قاعدة المعرفة',
     
     // Enterprise Page (New About Page)
@@ -262,30 +207,29 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     enterpriseCorePitchP2: "استفد من هذه القوة لتسريع العناية الواجبة، وتعزيز نمذجة مخاطر الائتمان، وتزويد فرقك بمساعد استراتيجي لاتخاذ القرارات عالية المخاطر.",
     enterpriseCapabilitiesTitle: "مجموعة من القدرات القوية والمتكاملة",
     capabilityAnalysisTitle: "تحليل مالي عميق",
-    capabilityAnalysisDesc: "قم بإجراء تحليل جنائي للبيانات المالية (بيان الدخل، الميزانية العمومية، التدفقات النقدية) لتقييم الصحة المالية والجدارة الائتمانية وتحديد العلامات الحمراء.",
+    capabilityAnalysisDesc: "قم بإجراء تحليل جنائي للبيانات المالية (بيان الدخل، الميزانية العمومية، التدفقات النقدية) لتقييم الصحة المالية والجدارة الائتمانية وتحديد العلامات الحمراء. يمكن لعبدالله معالجة سنوات من البيانات المالية في ثوانٍ لتقديم نظرة عامة شاملة.",
     capabilityDocIntelTitle: "معالجة ذكية للمستندات",
-    capabilityDocIntelDesc: "استخرج وحلل واستعلم عن البيانات من المستندات غير المهيكلة مثل ملفات PDF والتقارير والعقود باستخدام اللغة الطبيعية.",
+    capabilityDocIntelDesc: "استخرج وحلل واستعلم عن البيانات على الفور من المستندات غير المهيكلة مثل ملفات PDF والتقارير السنوية والعقود القانونية باستخدام اللغة الطبيعية. اطرح أسئلة معقدة واحصل على إجابات دقيقة مع الاستشهادات.",
     capabilityRiskTitle: "نمذجة المخاطر والاتجاهات التنبؤية",
-    capabilityRiskDesc: "استخدم النماذج المدفوعة بالذكاء الاصطناعي للتنبؤ بالمسارات المالية، وتوقع درجات الائتمان، وتحديد اتجاهات السوق الناشئة من بياناتك الخاصة.",
+    capabilityRiskDesc: "استخدم النماذج المدفوعة بالذكاء الاصطناعي للتنبؤ بالمسارات المالية، وتوقع درجات الائتمان بدقة عالية، وتحديد اتجاهات السوق الناشئة من بياناتك الخاصة، مع ضبط خاص لأسواق الشرق الأوسط.",
     capabilityDataTitle: "تحليل بيانات وكيلي",
-    capabilityDataDesc: "تجاوز لوحات المعلومات. أصدر أوامر لعبدالله لإجراء عمليات بيانات معقدة، وإنشاء تصورات مخصصة، والإجابة على أسئلة عميقة حول بياناتك.",
+    capabilityDataDesc: "تجاوز لوحات المعلومات الثابتة. أصدر أوامر لعبدالله لإجراء عمليات بيانات معقدة، وإنشاء تصورات مخصصة، والإجابة على أسئلة عميقة متعددة الأبعاد حول بياناتك في واجهة محادثة.",
     capabilityBilingualTitle: "ثنائي اللغة ومدرك للمنطقة",
-    capabilityBilingualDesc: "يتقن اللغتين العربية والإنجليزية تمامًا، مع فهم دقيق للوائح المالية في الشرق الأوسط وسياق السوق.",
+    capabilityBilingualDesc: "يتقن اللغتين العربية والإنجليزية تمامًا، مع فهم دقيق للوائح المالية لدول مجلس التعاون الخليجي، والسياق الثقافي، والمصطلحات الخاصة بالسوق، مما يضمن تحليلًا دقيقًا وملائمًا.",
     capabilityKnowledgeTitle: "قاعدة معرفة قابلة للتخصيص",
-    capabilityKnowledgeDesc: "عزز بشكل آمن معرفة عبدالله الأساسية بالقواعد والسياسات والبيانات الخاصة بمؤسستك لتحليل مخصص.",
+    capabilityKnowledgeDesc: "عزز بشكل آمن معرفة عبدالله الأساسية بالقواعد والسياسات الداخلية والبيانات الخاصة بمؤسستك لتحليل مصمم خصيصًا لإطار عملك التشغيلي.",
 
     enterpriseDeploymentTitle: "نشر وأمان على مستوى المؤسسات",
     deploymentSecurityTitle: "أمان لا هوادة فيه",
-    deploymentSecurityDesc: "بياناتك هي أثمن أصولك. تم بناء عبدالله على بنية خاصة مع تشفير من طرف إلى طرف. لا يتم استخدام بياناتك أبدًا للتدريب الخارجي.",
+    deploymentSecurityDesc: "بياناتك هي أثمن أصولك. تم بناء عبدالله على بنية خاصة أولاً مع تشفير من طرف إلى طرف. نضمن عدم استخدام بياناتك الخاصة أبدًا لتدريب النماذج الخارجية.",
     deploymentOnPremTitle: "في أماكن العمل والسحابة الخاصة",
-    deploymentOnPremDesc: "حافظ على السيطرة الكاملة على بياناتك. يمكن نشر عبدالله على بنيتك التحتية الخاصة، مما يضمن الامتثال لأكثر سياسات الإقامة والأمان صرامة للبيانات.",
+    deploymentOnPremDesc: "حافظ على السيطرة الكاملة على بياناتك وحوسبتك. يمكن نشر عبدالله على بنيتك التحتية الخاصة أو سحابتك الخاصة، مما يضمن الامتثال لأكثر سياسات إقامة البيانات وأمانها صرامة (مثل SAMA, CBUAE).",
     deploymentDataTitle: "ترخيص وتكامل مرن",
-    deploymentDataDesc: "نحن نقدم نماذج ترخيص مخصصة لتناسب احتياجات مؤسستك، مع وصول قوي إلى واجهة برمجة التطبيقات للتكامل السلس في سير عملك وأنظمتك الحالية.",
-
+    deploymentDataDesc: "نقدم نماذج ترخيص مخصصة، من الترخيص لكل مقعد إلى المؤسسة الكاملة، لتناسب احتياجات مؤسستك. يتيح الوصول القوي إلى واجهة برمجة التطبيقات التكامل السلس مع أنظمة CRM و ERP ومنصاتك المصرفية الداخلية الحالية.",
+    
     enterpriseCtaTitle: "هل أنت مستعد لتحويل ذكائك المالي؟",
-    enterpriseCtaDesc: "اكتشف كيف يمكن لعبدالله تمكين مؤسستك من اتخاذ قرارات أسرع وأكثر ذكاءً. حدد موعدًا لعرض توضيحي خاص مع فريقنا لرؤية المنصة أثناء العمل.",
+    enterpriseCtaDesc: "اكتشف كيف يمكن لعبدالله تمكين مؤسستك من اتخاذ قرارات أسرع وأكثر ذكاءً برؤى لا مثيل لها تعتمد على البيانات. حدد موعدًا لعرض توضيحي خاص مع فريق المؤسسات لدينا لرؤية المنصة أثناء العمل.",
     enterpriseCtaButton: "طلب عرض توضيحي",
-
   },
 };
 
@@ -324,5 +268,3 @@ export function useLanguage() {
   }
   return context;
 }
-
-    
