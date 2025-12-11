@@ -2,244 +2,160 @@
 'use client';
 
 import Link from 'next/link';
-import { MessageCircle, Sheet, BookOpen, Rocket, Wand, ListChecks, BrainCircuit, Bot, ShieldCheck, LineChart, FileCheck as FileCheckIcon, Briefcase, BarChart3, Clock } from 'lucide-react';
 import { LanguageToggle } from '@/components/language-toggle';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useLanguage } from '@/context/language-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { AbdullahAvatar } from '@/components/abdullah-avatar';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { ShieldCheck, Server, Database, BrainCircuit, Users, Globe, LineChart, TrendingUp, Filter, FileText } from 'lucide-react';
+
+const EnterpriseFeatureCard = ({ icon, title, description }: { icon: React.ElementType, title: string, description: string }) => {
+    const Icon = icon;
+    return (
+        <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                <Icon className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+                <h3 className="font-semibold text-lg">{title}</h3>
+                <p className="text-muted-foreground">{description}</p>
+            </div>
+        </div>
+    );
+};
+
+const MockChart = () => (
+    <div className="p-4 bg-muted/50 rounded-lg">
+        <div className="h-40 w-full">
+            <svg width="100%" height="100%" viewBox="0 0 400 160" preserveAspectRatio="xMidYMid meet" className="text-primary">
+                <path d="M 20 140 C 80 100, 120 40, 200 80 S 280 120, 380 60" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M 20 140 C 80 120, 120 80, 200 100 S 280 140, 380 100" stroke="currentColor" strokeWidth="2" fill="none" strokeOpacity="0.4" strokeDasharray="4" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="200" cy="80" r="3" fill="currentColor" />
+                <circle cx="380" cy="60" r="3" fill="currentColor" />
+                <line x1="20" y1="140" x2="380" y2="140" stroke="hsl(var(--border))" strokeWidth="1" />
+                <line x1="20" y1="20" x2="20" y2="140" stroke="hsl(var(--border))" strokeWidth="1" />
+            </svg>
+        </div>
+    </div>
+);
+
+const SVGDataIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9v-2h2v2zm0-4H9V7h2v5zm4 4h-2v-2h2v2zm0-4h-2V7h2v5z"/>
+  </svg>
+);
+
 
 export default function AboutPageClient() {
   const { t, dir } = useLanguage();
 
-  const capabilities = [
-    {
-      icon: MessageCircle,
-      title: t('learnChatTitle'),
-      description: t('learnChatDesc'),
-      availability: t('chatAvailability')
-    },
-    {
-      icon: Sheet,
-      title: t('learnSpreadsheetTitle'),
-      description: t('learnSpreadsheetDesc'),
-      availability: t('spreadsheetAvailability')
-    },
-    {
-      icon: BarChart3,
-      title: t('learnDATitle'),
-      description: t('learnDADesc'),
-      availability: t('daAvailability')
-    },
-    {
-      icon: Wand,
-      title: t('learnAITitle'),
-      description: t('learnAIDesc'),
-    },
-    {
-      icon: ShieldCheck,
-      title: t('learnSecurityTitle'),
-      description: t('learnSecurityDesc'),
-    }
-  ];
-
-  const gettingStartedSteps = [
-    {
-      title: t('gsChatStepTitle'),
-      description: t('gsChatStepDesc'),
-    },
-    {
-      title: t('gsSpreadsheetStepTitle'),
-      description: t('gsSpreadsheetStepDesc'),
-    },
-    {
-      title: t('gsDAStepTitle'),
-      description: t('gsDAStepDesc'),
-    },
-  ];
-  
-  const abdullahFeatures = Array.from({ length: 15 }, (_, i) => t(`csAbdullahFeature${i + 1}`));
-  const spreadsheetFeatures = Array.from({ length: 15 }, (_, i) => t(`csSpreadsheetFeature${i + 1}`));
-  const dataAnalyticsFeatures = Array.from({ length: 10 }, (_, i) => t(`csDAFeature${i + 1}`));
-
-  const whoBenefits = [
-    {
-      icon: LineChart,
-      title: t('learnRoleAnalystTitle'),
-      description: t('learnRoleAnalystDesc'),
-    },
-    {
-      icon: FileCheckIcon,
-      title: t('learnRoleOfficerTitle'),
-      description: t('learnRoleOfficerDesc'),
-    },
-    {
-      icon: Briefcase,
-      title: t('learnRoleExecutiveTitle'),
-      description: t('learnRoleExecutiveDesc'),
-    },
-  ];
-
-
   return (
     <div className="flex flex-col h-screen bg-background text-foreground" dir={dir}>
-      <header className="grid grid-cols-3 items-center p-4 border-b shrink-0 bg-background/80 backdrop-blur-sm">
+      <header className="grid grid-cols-3 items-center p-4 border-b shrink-0 bg-background/80 backdrop-blur-sm z-10">
         <div className="justify-self-start">
           <SidebarTrigger />
         </div>
-        <h1 className="text-xl font-semibold tracking-tight justify-self-center">{t('learnPageTitle')}</h1>
+        <h1 className="text-xl font-semibold tracking-tight justify-self-center">{t('enterprisePageTitle')}</h1>
         <div className="justify-self-end">
           <LanguageToggle />
         </div>
       </header>
       
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in-50 duration-500">
-          <div className="flex flex-col items-center text-center space-y-4">
-            <AbdullahAvatar className="w-20 h-20" />
-            <h2 className="text-3xl font-bold tracking-tight">{t('learnPageTitle')}</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl">
-              {t('learnIntro')}
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-5xl mx-auto space-y-16 p-4 md:p-8 animate-in fade-in-50 duration-500">
+          
+          <section className="text-center pt-8">
+            <AbdullahAvatar className="w-24 h-24 mx-auto mb-6" />
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-primary to-slate-500">
+              {t('enterpriseHeader')}
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto mt-6">
+              {t('enterpriseSubHeader')}
             </p>
-          </div>
+          </section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('learnCapabilitiesTitle')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Accordion type="single" collapsible className="w-full">
-                {capabilities.map((item, index) => (
-                    <AccordionItem value={`item-${index + 1}`} key={index}>
-                        <AccordionTrigger>
-                            <div className="flex items-center gap-3">
-                            <item.icon className="h-5 w-5 text-primary" />
-                            <span className="font-semibold">{item.title}</span>
-                            </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="text-muted-foreground pl-11 space-y-3">
-                            <p>{item.description}</p>
-                            {item.availability && (
-                                <div className="text-xs font-medium text-muted-foreground/80 flex items-center gap-2">
-                                    <Clock className="w-3 h-3"/>
-                                    <span className="font-semibold">{t('capabilityHours')}</span>
-                                    <span>{item.availability}</span>
-                                </div>
-                            )}
-                        </AccordionContent>
-                    </AccordionItem>
-                ))}
-              </Accordion>
-            </CardContent>
-          </Card>
-          
-           <Card>
-            <CardHeader>
-              <CardTitle>{t('learnWhoBenefitsTitle')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {whoBenefits.map((item, index) => (
-                <div key={index} className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-muted text-primary flex items-center justify-center">
-                    <item.icon className="w-5 h-5" />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="font-semibold">{item.title}</h3>
-                    <p className="text-muted-foreground">{item.description}</p>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-           <Card>
-            <CardHeader>
-              <CardTitle>{t('gettingStartedTitle')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                {gettingStartedSteps.map((step, index) => (
-                    <div key={index} className="flex gap-4">
-                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold">{index + 1}</div>
-                        <div className="space-y-1">
-                            <h3 className="font-semibold">{step.title}</h3>
-                            <p className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: step.description }} />
-                        </div>
+          <section>
+             <Card className="shadow-2xl bg-gradient-to-br from-background via-card to-background">
+                <CardHeader>
+                    <CardTitle>{t('enterpriseCorePitchTitle')}</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <div className="space-y-4 text-muted-foreground">
+                        <p>{t('enterpriseCorePitchP1')}</p>
+                        <p>{t('enterpriseCorePitchP2')}</p>
                     </div>
-                ))}
-            </CardContent>
-          </Card>
+                    <MockChart />
+                </CardContent>
+             </Card>
+          </section>
           
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <BrainCircuit className="w-7 h-7 text-primary" />
-                <CardTitle>{t('comingSoonAbdullahTitle')}</CardTitle>
-              </div>
-              <CardDescription>{t('comingSoonAbdullahDesc')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
-                  {abdullahFeatures.map((feature, index) => (
-                      <li key={index} className="flex items-start gap-3">
-                          <Rocket className="w-5 h-5 mt-0.5 text-primary/70 shrink-0"/>
-                          <span className="text-muted-foreground">{feature}</span>
-                      </li>
-                  ))}
-              </ul>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <Bot className="w-7 h-7 text-primary" />
-                <CardTitle>{t('comingSoonSpreadsheetTitle')}</CardTitle>
-              </div>
-              <CardDescription>{t('comingSoonSpreadsheetDesc')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
-                  {spreadsheetFeatures.map((feature, index) => (
-                      <li key={index} className="flex items-start gap-3">
-                          <Rocket className="w-5 h-5 mt-0.5 text-primary/70 shrink-0"/>
-                          <span className="text-muted-foreground">{feature}</span>
-                      </li>
-                  ))}
-              </ul>
-            </CardContent>
-          </Card>
+          <section>
+            <h3 className="text-3xl font-bold text-center mb-10">{t('enterpriseCapabilitiesTitle')}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="flex flex-col gap-2 p-6 rounded-lg border bg-card">
+                    <BrainCircuit className="w-8 h-8 text-primary mb-3" />
+                    <h4 className="font-semibold text-xl">{t('capabilityAnalysisTitle')}</h4>
+                    <p className="text-muted-foreground">{t('capabilityAnalysisDesc')}</p>
+                </div>
+                <div className="flex flex-col gap-2 p-6 rounded-lg border bg-card">
+                    <FileText className="w-8 h-8 text-primary mb-3" />
+                    <h4 className="font-semibold text-xl">{t('capabilityDocIntelTitle')}</h4>
+                    <p className="text-muted-foreground">{t('capabilityDocIntelDesc')}</p>
+                </div>
+                <div className="flex flex-col gap-2 p-6 rounded-lg border bg-card">
+                    <TrendingUp className="w-8 h-8 text-primary mb-3" />
+                    <h4 className="font-semibold text-xl">{t('capabilityRiskTitle')}</h4>
+                    <p className="text-muted-foreground">{t('capabilityRiskDesc')}</p>
+                </div>
+                <div className="flex flex-col gap-2 p-6 rounded-lg border bg-card">
+                    <Filter className="w-8 h-8 text-primary mb-3" />
+                    <h4 className="font-semibold text-xl">{t('capabilityDataTitle')}</h4>
+                    <p className="text-muted-foreground">{t('capabilityDataDesc')}</p>
+                </div>
+                 <div className="flex flex-col gap-2 p-6 rounded-lg border bg-card">
+                    <Globe className="w-8 h-8 text-primary mb-3" />
+                    <h4 className="font-semibold text-xl">{t('capabilityBilingualTitle')}</h4>
+                    <p className="text-muted-foreground">{t('capabilityBilingualDesc')}</p>
+                </div>
+                 <div className="flex flex-col gap-2 p-6 rounded-lg border bg-card">
+                    <Users className="w-8 h-8 text-primary mb-3" />
+                    <h4 className="font-semibold text-xl">{t('capabilityKnowledgeTitle')}</h4>
+                    <p className="text-muted-foreground">{t('capabilityKnowledgeDesc')}</p>
+                </div>
+            </div>
+          </section>
 
-           <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <BarChart3 className="w-7 h-7 text-primary" />
-                <CardTitle>{t('comingSoonDATitle')}</CardTitle>
-              </div>
-              <CardDescription>{t('comingSoonDADesc')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
-                  {dataAnalyticsFeatures.map((feature, index) => (
-                      <li key={index} className="flex items-start gap-3">
-                          <Rocket className="w-5 h-5 mt-0.5 text-primary/70 shrink-0"/>
-                          <span className="text-muted-foreground">{feature}</span>
-                      </li>
-                  ))}
-              </ul>
-            </CardContent>
-          </Card>
+          <section>
+            <h3 className="text-3xl font-bold text-center mb-10">{t('enterpriseDeploymentTitle')}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <EnterpriseFeatureCard 
+                    icon={ShieldCheck}
+                    title={t('deploymentSecurityTitle')}
+                    description={t('deploymentSecurityDesc')}
+                />
+                <EnterpriseFeatureCard 
+                    icon={Server}
+                    title={t('deploymentOnPremTitle')}
+                    description={t('deploymentOnPremDesc')}
+                />
+                <EnterpriseFeatureCard 
+                    icon={Database}
+                    title={t('deploymentDataTitle')}
+                    description={t('deploymentDataDesc')}
+                />
+            </div>
+          </section>
 
-          <div className="flex flex-col items-center gap-4 mt-12 mb-8">
+          <section className="text-center py-12">
+            <h3 className="text-3xl font-bold">{t('enterpriseCtaTitle')}</h3>
+            <p className="text-muted-foreground max-w-2xl mx-auto mt-4 mb-8">
+              {t('enterpriseCtaDesc')}
+            </p>
             <Button asChild size="lg" className="font-semibold text-base px-8 py-6 bg-gradient-to-br from-slate-900 to-slate-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-              <Link href="/chat">{t('getStartedAbdullah')}</Link>
+              <Link href="/chat">{t('enterpriseCtaButton')}</Link>
             </Button>
-            <Button asChild variant="link" className="text-muted-foreground">
-              <Link href="/spreadsheet">{t('getStartedSpreadsheet')}</Link>
-            </Button>
-          </div>
+          </section>
         </div>
       </main>
     </div>

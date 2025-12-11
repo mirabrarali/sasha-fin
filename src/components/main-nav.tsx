@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageCircle, Sheet as SheetIcon, BookOpen, BarChart3, GraduationCap, BrainCircuit } from 'lucide-react';
+import { MessageCircle, BookOpen, BrainCircuit } from 'lucide-react';
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from '@/components/ui/sidebar';
 import { useLanguage } from '@/context/language-context';
 
@@ -28,30 +28,6 @@ export function MainNav() {
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
-      <SidebarMenuItem>
-        <SidebarMenuButton asChild isActive={pathname.startsWith('/spreadsheet')}>
-          <Link href="/spreadsheet" onClick={handleLinkClick}>
-            <SheetIcon />
-            <span>{t('spreadsheetTitle')}</span>
-          </Link>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-      <SidebarMenuItem>
-        <SidebarMenuButton asChild isActive={pathname.startsWith('/spreadsheet-guide')}>
-          <Link href="/spreadsheet-guide" onClick={handleLinkClick}>
-            <GraduationCap />
-            <span>{t('spreadsheetGuideTitle')}</span>
-          </Link>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-       <SidebarMenuItem>
-        <SidebarMenuButton asChild isActive={pathname.startsWith('/data-analytics')}>
-          <Link href="/data-analytics" onClick={handleLinkClick}>
-            <BarChart3 />
-            <span>{t('dataAnalyticsTitle')}</span>
-          </Link>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
        <SidebarMenuItem>
         <SidebarMenuButton asChild isActive={pathname.startsWith('/knowledge-base')}>
           <Link href="/knowledge-base" onClick={handleLinkClick}>
@@ -71,3 +47,5 @@ export function MainNav() {
     </SidebarMenu>
   );
 }
+
+    
