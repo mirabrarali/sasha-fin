@@ -72,6 +72,8 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     netIncome: "Net Income",
     pdfGenerationError: "Could not generate the PDF report.",
     maintenanceMessage: "Services are undergoing maintenance and major upgrades. Time remaining: {{time}}",
+    ttsReadAloud: "Read Aloud",
+    ttsStop: "Stop",
     
     newSessionButton: "New Session",
     newSessionTitle: "New Session Started",
@@ -201,6 +203,8 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     netIncome: "صافي الدخل",
     pdfGenerationError: "تعذر إنشاء تقرير PDF.",
     maintenanceMessage: "تخضع الخدمات للصيانة والتحديثات الرئيسية. الوقت المتبقي: {{time}}",
+    ttsReadAloud: "اقرأ بصوت عالٍ",
+    ttsStop: "إيقاف",
     
     newSessionButton: "جلسة جديدة",
     newSessionTitle: "بدأت جلسة جديدة",
