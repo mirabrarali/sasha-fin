@@ -117,7 +117,7 @@ export default function SpreadsheetClient() {
 
   useEffect(() => {
     if (hotRef.current) {
-      const instance = hotRef.current.hotInstance;
+      const instance = (hotRef.current as any).hotInstance as Handsontable;
       setHotInstance(instance);
     }
   }, []);
