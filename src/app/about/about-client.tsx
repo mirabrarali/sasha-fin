@@ -8,7 +8,7 @@ import { useLanguage } from '@/context/language-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { AbdullahAvatar } from '@/components/abdullah-avatar';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, Server, Database, BrainCircuit, Users, Globe, LineChart, TrendingUp, Filter, FileText } from 'lucide-react';
+import { ShieldCheck, Server, Database, BrainCircuit, Users, Globe, LineChart, TrendingUp, Filter, FileText, Landmark, Puzzle, ShieldAlert, Workflow } from 'lucide-react';
 
 const EnterpriseFeatureCard = ({ icon, title, description }: { icon: React.ElementType, title: string, description: string }) => {
     const Icon = icon;
@@ -77,6 +77,7 @@ export default function AboutPageClient() {
                     <div className="space-y-4 text-muted-foreground">
                         <p>{t('enterpriseCorePitchP1')}</p>
                         <p>{t('enterpriseCorePitchP2')}</p>
+                        <p>{t('enterpriseCorePitchP3')}</p>
                     </div>
                     <MockChart />
                 </CardContent>
@@ -120,6 +121,32 @@ export default function AboutPageClient() {
           </section>
 
           <section>
+            <h3 className="text-3xl font-bold text-center mb-10">{t('highSkillsTitle')}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <EnterpriseFeatureCard 
+                    icon={Workflow}
+                    title={t('skillAgenticTitle')}
+                    description={t('skillAgenticDesc')}
+                />
+                <EnterpriseFeatureCard 
+                    icon={ShieldAlert}
+                    title={t('skillAnomalyTitle')}
+                    description={t('skillAnomalyDesc')}
+                />
+                <EnterpriseFeatureCard 
+                    icon={LineChart}
+                    title={t('skillScenarioTitle')}
+                    description={t('skillScenarioDesc')}
+                />
+                <EnterpriseFeatureCard 
+                    icon={Puzzle}
+                    title={t('skillIntegrationTitle')}
+                    description={t('skillIntegrationDesc')}
+                />
+            </div>
+          </section>
+
+          <section>
             <h3 className="text-3xl font-bold text-center mb-10">{t('enterpriseDeploymentTitle')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <EnterpriseFeatureCard 
@@ -140,6 +167,22 @@ export default function AboutPageClient() {
             </div>
           </section>
 
+          <section>
+            <h3 className="text-3xl font-bold text-center mb-10">{t('complianceTitle')}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <EnterpriseFeatureCard 
+                    icon={Landmark}
+                    title={t('complianceSAMATitle')}
+                    description={t('complianceSAMADesc')}
+                />
+                <EnterpriseFeatureCard 
+                    icon={ShieldCheck}
+                    title={t('complianceISOTitle')}
+                    description={t('complianceISODesc')}
+                />
+            </div>
+          </section>
+
           <section className="text-center py-12">
             <h3 className="text-3xl font-bold">{t('enterpriseCtaTitle')}</h3>
             <p className="text-muted-foreground max-w-2xl mx-auto mt-4 mb-8">
@@ -154,3 +197,5 @@ export default function AboutPageClient() {
     </div>
   );
 }
+
+    

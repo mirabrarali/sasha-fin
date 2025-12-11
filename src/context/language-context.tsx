@@ -99,6 +99,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     enterpriseCorePitchTitle: "From Billions of Datapoints to Actionable Intelligence",
     enterpriseCorePitchP1: "Abdullah is architected to process and synthesize vast datasets—from terabytes of transactional records to thousands of complex financial documents—in near real-time. Our custom AI models, trained specifically for financial analysis, identify critical patterns, predict risk, and generate institutional-grade insights at a scale and speed that is impossible for human teams alone.",
     enterpriseCorePitchP2: "Leverage this power to accelerate due diligence, enhance credit risk modeling, and provide your teams with a strategic co-pilot for high-stakes decision-making.",
+    enterpriseCorePitchP3: "Our system is built to handle the complexities of regional financial data, offering unparalleled accuracy and relevance for the GCC markets.",
     enterpriseCapabilitiesTitle: "A Suite of Powerful, Integrated Capabilities",
     capabilityAnalysisTitle: "Deep Financial Analysis",
     capabilityAnalysisDesc: "Perform forensic analysis on financial statements (P&L, Balance Sheet, Cash Flow) to evaluate financial health, creditworthiness, and identify red flags. Abdullah can process years of financial data in seconds to provide a comprehensive overview.",
@@ -117,13 +118,30 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     deploymentSecurityTitle: "Uncompromising Security",
     deploymentSecurityDesc: "Your data is your most valuable asset. Abdullah is built on a private-first architecture with end-to-end encryption. Your proprietary data is never used for external model training, guaranteed.",
     deploymentOnPremTitle: "On-Premise & Private Cloud",
-    deploymentOnPremDesc: "Maintain full control over your data and compute. Abdullah can be deployed on your own infrastructure or private cloud, ensuring compliance with the strictest data residency and security policies (e.g., SAMA, CBUAE).",
+    deploymentOnPremDesc: "Maintain full control over your data and compute. Abdullah can be deployed on your own infrastructure or private cloud, ensuring compliance with the strictest data residency and security policies.",
     deploymentDataTitle: "Flexible Licensing & Integration",
     deploymentDataDesc: "We offer tailored licensing models, from per-seat to full enterprise, to fit your organization's needs. Robust API access allows for seamless integration into your existing CRM, ERP, and internal banking platforms.",
     
     enterpriseCtaTitle: "Ready to Transform Your Financial Intelligence?",
     enterpriseCtaDesc: "Discover how Abdullah can empower your organization to make faster, smarter decisions with unparalleled data-driven insights. Schedule a private demo with our enterprise team to see the platform in action.",
     enterpriseCtaButton: "Request a Demo",
+
+    // New Sections
+    complianceTitle: "Built for Trust & Compliance",
+    complianceSAMATitle: "SAMA-Compliant Framework",
+    complianceSAMADesc: "Designed with the Saudi Central Bank's regulatory framework in mind, ensuring our on-premise solutions meet stringent data sovereignty and security requirements for financial institutions in the Kingdom.",
+    complianceISOTitle: "ISO 27001 Certified",
+    complianceISODesc: "Our security practices are aligned with ISO 27001 standards, providing a certified Information Security Management System (ISMS) that protects your data integrity, confidentiality, and availability.",
+
+    highSkillsTitle: "High-Skill Agentic Functions",
+    skillAgenticTitle: "Agentic Workflow Automation",
+    skillAgenticDesc: "Abdullah can execute multi-step financial processes autonomously. From running month-end reconciliations to generating board-ready reports, he acts as a tireless digital analyst.",
+    skillAnomalyTitle: "Forensic Anomaly Detection",
+    skillAnomalyDesc: "Leveraging advanced pattern recognition, Abdullah can sift through millions of transactions to flag potentially fraudulent activities, compliance breaches, or data inconsistencies that would evade human review.",
+    skillScenarioTitle: "Complex Scenario Modeling",
+    skillScenarioDesc: "Ask Abdullah to model complex what-if scenarios, such as the impact of interest rate changes on a loan portfolio or market volatility on investment performance, and receive data-backed projections in seconds.",
+    skillIntegrationTitle: "Seamless Systems Integration",
+    skillIntegrationDesc: "Abdullah is not a silo. He can be integrated with your core banking systems, data warehouses, and market data feeds to pull and push information, enriching his analysis with real-time context.",
 
     // Data Analytics
     dataAnalyticsTitle: 'Data Analytics',
@@ -230,6 +248,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     enterpriseCorePitchTitle: "من مليارات نقاط البيانات إلى ذكاء قابل للتنفيذ",
     enterpriseCorePitchP1: "تم تصميم عبدالله لمعالجة وتجميع مجموعات بيانات ضخمة - من تيرابايت من سجلات المعاملات إلى آلاف المستندات المالية المعقدة - في الوقت الفعلي تقريبًا. تحدد نماذج الذكاء الاصطناعي المخصصة لدينا، والتي تم تدريبها خصيصًا للتحليل المالي، الأنماط الحرجة وتتنبأ بالمخاطر وتولد رؤى على مستوى المؤسسات بحجم وسرعة يستحيل على الفرق البشرية وحدها تحقيقها.",
     enterpriseCorePitchP2: "استفد من هذه القوة لتسريع العناية الواجبة، وتعزيز نمذجة مخاطر الائتمان، وتزويد فرقك بمساعد استراتيجي لاتخاذ القرارات عالية المخاطر.",
+    enterpriseCorePitchP3: "نظامنا مصمم للتعامل مع تعقيدات البيانات المالية الإقليمية، مما يوفر دقة وأهمية لا مثيل لها لأسواق دول مجلس التعاون الخليجي.",
     enterpriseCapabilitiesTitle: "مجموعة من القدرات القوية والمتكاملة",
     capabilityAnalysisTitle: "تحليل مالي عميق",
     capabilityAnalysisDesc: "قم بإجراء تحليل جنائي للبيانات المالية (بيان الدخل، الميزانية العمومية، التدفقات النقدية) لتقييم الصحة المالية والجدارة الائتمانية وتحديد العلامات الحمراء. يمكن لعبدالله معالجة سنوات من البيانات المالية في ثوانٍ لتقديم نظرة عامة شاملة.",
@@ -248,7 +267,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     deploymentSecurityTitle: "أمان لا هوادة فيه",
     deploymentSecurityDesc: "بياناتك هي أثمن أصولك. تم بناء عبدالله على بنية خاصة أولاً مع تشفير من طرف إلى طرف. نضمن عدم استخدام بياناتك الخاصة أبدًا لتدريب النماذج الخارجية.",
     deploymentOnPremTitle: "في أماكن العمل والسحابة الخاصة",
-    deploymentOnPremDesc: "حافظ على السيطرة الكاملة على بياناتك وحوسبتك. يمكن نشر عبدالله على بنيتك التحتية الخاصة أو سحابتك الخاصة، مما يضمن الامتثال لأكثر سياسات إقامة البيانات وأمانها صرامة (مثل SAMA, CBUAE).",
+    deploymentOnPremDesc: "حافظ على السيطرة الكاملة على بياناتك وحوسبتك. يمكن نشر عبدالله على بنيتك التحتية الخاصة أو سحابتك الخاصة، مما يضمن الامتثال لأكثر سياسات إقامة البيانات وأمانها صرامة.",
     deploymentDataTitle: "ترخيص وتكامل مرن",
     deploymentDataDesc: "نقدم نماذج ترخيص مخصصة، من الترخيص لكل مقعد إلى المؤسسة الكاملة، لتناسب احتياجات مؤسستك. يتيح الوصول القوي إلى واجهة برمجة التطبيقات التكامل السلس مع أنظمة CRM و ERP ومنصاتك المصرفية الداخلية الحالية.",
     
@@ -256,6 +275,23 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     enterpriseCtaDesc: "اكتشف كيف يمكن لعبدالله تمكين مؤسستك من اتخاذ قرارات أسرع وأكثر ذكاءً برؤى لا مثيل لها تعتمد على البيانات. حدد موعدًا لعرض توضيحي خاص مع فريق المؤسسات لدينا لرؤية المنصة أثناء العمل.",
     enterpriseCtaButton: "طلب عرض توضيحي",
     
+    // New Sections
+    complianceTitle: "مصمم للثقة والامتثال",
+    complianceSAMATitle: "متوافق مع إطار SAMA",
+    complianceSAMADesc: "مصمم مع الأخذ في الاعتبار الإطار التنظيمي للبنك المركزي السعودي، مما يضمن أن حلولنا المحلية تلبي متطلبات سيادة البيانات والأمان الصارمة للمؤسسات المالية في المملكة.",
+    complianceISOTitle: "معتمد بشهادة ISO 27001",
+    complianceISODesc: "تتوافق ممارساتنا الأمنية مع معايير ISO 27001، مما يوفر نظام إدارة أمن معلومات (ISMS) معتمد يحمي سلامة بياناتك وسريتها وتوافرها.",
+
+    highSkillsTitle: "وظائف وكيلية عالية المهارة",
+    skillAgenticTitle: "أتمتة سير العمل الوكيلية",
+    skillAgenticDesc: "يمكن لعبدالله تنفيذ عمليات مالية متعددة الخطوات بشكل مستقل. من إجراء تسويات نهاية الشهر إلى إنشاء تقارير جاهزة لمجلس الإدارة، يعمل كمحلل رقمي لا يكل.",
+    skillAnomalyTitle: "كشف الشذوذ الجنائي",
+    skillAnomalyDesc: "باستخدام التعرف المتقدم على الأنماط، يمكن لعبدالله فحص ملايين المعاملات للإبلاغ عن الأنشطة الاحتيالية المحتملة أو انتهاكات الامتثال أو تناقضات البيانات التي قد تفلت من المراجعة البشرية.",
+    skillScenarioTitle: "نمذجة السيناريوهات المعقدة",
+    skillScenarioDesc: "اطلب من عبدالله نمذجة سيناريوهات 'ماذا لو' المعقدة، مثل تأثير تغييرات أسعار الفائدة على محفظة القروض أو تقلبات السوق على أداء الاستثمار، واحصل على توقعات مدعومة بالبيانات في ثوانٍ.",
+    skillIntegrationTitle: "تكامل سلس للأنظمة",
+    skillIntegrationDesc: "عبدالله ليس نظامًا معزولًا. يمكن دمجه مع أنظمتك المصرفية الأساسية ومستودعات البيانات وتغذية بيانات السوق لسحب ودفع المعلومات، مما يثري تحليله بالسياق في الوقت الفعلي.",
+
     // Data Analytics
     dataAnalyticsTitle: 'تحليلات البيانات',
     daUploadPromptTitle: "لوحة بيانات فورية",
@@ -330,3 +366,5 @@ export function useLanguage() {
   }
   return context;
 }
+
+    
