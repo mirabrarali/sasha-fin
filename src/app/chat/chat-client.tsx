@@ -1,11 +1,11 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
-import { CornerDownLeft, Mic, FileUp, FileText, XCircle, Loader2, RefreshCw } from 'lucide-react';
+import { CornerDownLeft, Mic, FileUp, FileText, XCircle, Loader2, RefreshCw, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -30,6 +30,7 @@ import { LanguageToggle } from '@/components/language-toggle';
 import { useLanguage } from '@/context/language-context';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { AbdullahStatus } from '@/components/abdullah-status';
+import { cn } from '@/lib/utils';
 
 
 const generateAndDownloadPdf = async (element: HTMLElement, fileName: string) => {
@@ -101,6 +102,68 @@ export default function ChatPageClient() {
   const [pdfRenderContent, setPdfRenderContent] = useState<React.ReactNode | null>(null);
   const pdfContainerRef = useRef<HTMLDivElement>(null);
   const [isNewSessionDialogOpen, setIsNewSessionDialogOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isDragValid, setIsDragValid] = useState(true);
+
+  const handleDragEvents = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setIsDragging(true);
+      const items = e.dataTransfer?.items;
+      if (items && items.length > 0) {
+        const fileType = items[0].type;
+        setIsDragValid(fileType === 'application/pdf' || fileType === 'text/csv' || fileType === 'application/vnd.ms-excel' || fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      }
+    } else { // dragleave, drop
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      const fileType = file.type;
+      
+      if (fileType === 'application/pdf') {
+        handlePdfUpload({ target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>);
+      } else if (fileType === 'text/csv' || fileType === 'application/vnd.ms-excel' || fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+        handleFileUpload({ target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>);
+      } else {
+        toast({
+            variant: 'destructive',
+            title: t('daUnsupportedFileType'),
+            description: t('daDragDropUnsupported'),
+        });
+      }
+    }
+  }, [t, toast]);
+
+
+  useEffect(() => {
+    const mainElement = document.getElementById('chat-main');
+    if (mainElement) {
+        mainElement.addEventListener('dragenter', handleDragEvents);
+        mainElement.addEventListener('dragover', handleDragEvents);
+        mainElement.addEventListener('dragleave', handleDragEvents);
+        mainElement.addEventListener('drop', handleDrop);
+    }
+    
+    return () => {
+        if (mainElement) {
+            mainElement.removeEventListener('dragenter', handleDragEvents);
+            mainElement.removeEventListener('dragover', handleDragEvents);
+            mainElement.removeEventListener('dragleave', handleDragEvents);
+            mainElement.removeEventListener('drop', handleDrop);
+        }
+    };
+  }, [handleDragEvents, handleDrop]);
 
   useEffect(() => {
     setHasMounted(true);
@@ -616,7 +679,7 @@ export default function ChatPageClient() {
               </header>
               <div className="relative flex-1 overflow-hidden">
                 <div className="h-full flex flex-col animate-in fade-in-50 duration-500">
-                  <main className="flex-1 overflow-y-auto">
+                  <main id="chat-main" className="flex-1 overflow-y-auto">
                       <MessageList 
                       messages={messages} 
                       isLoading={isLoading} 
@@ -755,6 +818,25 @@ export default function ChatPageClient() {
               </AlertDialogContent>
           </AlertDialog>
 
+            {isDragging && (
+                <div 
+                    className={cn(
+                        "absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-opacity",
+                        isDragging ? "opacity-100" : "opacity-0"
+                    )}
+                >
+                    <div className={cn(
+                        "flex flex-col items-center gap-4 rounded-lg border-2 border-dashed p-12 transition-colors",
+                        isDragValid ? "border-primary" : "border-destructive"
+                    )}>
+                        <UploadCloud className={cn("h-12 w-12", isDragValid ? "text-primary" : "text-destructive")} />
+                        <p className={cn("text-lg font-semibold", isDragValid ? "text-primary" : "text-destructive")}>
+                            {isDragValid ? t('daDragDropValid') : t('daDragDropInvalid')}
+                        </p>
+                        <p className="text-sm text-muted-foreground">{t('daDragDropSupported')}</p>
+                    </div>
+                </div>
+            )}
 
           {pdfRenderContent && (
             <div ref={pdfContainerRef} className="absolute -left-[9999px] -z-10">

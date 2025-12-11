@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { 
   Chart as ChartJS, 
@@ -17,13 +17,14 @@ import {
 import { LanguageToggle } from '@/components/language-toggle';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Loader2, FileUp, Bot, RefreshCw, Lightbulb, FileText, BarChart3, PieChart, Download } from 'lucide-react';
+import { Loader2, FileUp, Bot, RefreshCw, Lightbulb, FileText, BarChart3, PieChart, Download, UploadCloud } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/context/language-context';
 import { useToast } from '@/hooks/use-toast';
 import { generateDashboard, type GenerateDashboardOutput } from '@/ai/flows/generate-dashboard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AbdullahStatus } from '@/components/abdullah-status';
+import { cn } from '@/lib/utils';
 
 const Bar = dynamic(() => import('react-chartjs-2').then(mod => mod.Bar), { ssr: false });
 const Pie = dynamic(() => import('react-chartjs-2').then(mod => mod.Pie), { ssr: false });
@@ -103,7 +104,56 @@ export default function DataAnalyticsClient() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [dashboardData, setDashboardData] = useState<GenerateDashboardOutput | null>(null);
   const [fileName, setFileName] = useState('');
-  
+  const [isDragging, setIsDragging] = useState(false);
+  const [isDragValid, setIsDragValid] = useState(true);
+
+  const handleDragEvents = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setIsDragging(true);
+      const items = e.dataTransfer?.items;
+      if (items && items.length > 0) {
+        const fileType = items[0].type;
+        setIsDragValid(fileType === 'application/pdf' || fileType === 'text/csv' || fileType === 'application/vnd.ms-excel' || fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      }
+    } else { // dragleave, drop
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      handleFileUpload({ target: { files } } as unknown as React.ChangeEvent<HTMLInputElement>);
+    }
+  }, [handleFileUpload]);
+
+
+  useEffect(() => {
+    const mainElement = document.getElementById('da-main');
+    if (mainElement) {
+        mainElement.addEventListener('dragenter', handleDragEvents);
+        mainElement.addEventListener('dragover', handleDragEvents);
+        mainElement.addEventListener('dragleave', handleDragEvents);
+        mainElement.addEventListener('drop', handleDrop);
+    }
+    
+    return () => {
+        if (mainElement) {
+            mainElement.removeEventListener('dragenter', handleDragEvents);
+            mainElement.removeEventListener('dragover', handleDragEvents);
+            mainElement.removeEventListener('dragleave', handleDragEvents);
+            mainElement.removeEventListener('drop', handleDrop);
+        }
+    };
+  }, [handleDragEvents, handleDrop]);
+
   useEffect(() => {
     setHasMounted(true);
   }, []);
@@ -153,7 +203,7 @@ export default function DataAnalyticsClient() {
         toast({
             variant: 'destructive',
             title: t('daUnsupportedFileType'),
-            description: 'Please upload a CSV, XLSX, or PDF file.',
+            description: t('daDragDropUnsupported'),
         });
         setIsLoading(false);
         handleClear();
@@ -253,7 +303,7 @@ export default function DataAnalyticsClient() {
         </div>
       </header>
 
-      <main className="relative flex-1 overflow-auto p-4 md:p-8">
+      <main id="da-main" className="relative flex-1 overflow-auto p-4 md:p-8">
         <div className="max-w-7xl mx-auto space-y-6">
           {!fileName ? (
                 <div className="w-full pt-8 md:pt-16 flex justify-center animate-in fade-in-50 duration-500">
@@ -350,6 +400,25 @@ export default function DataAnalyticsClient() {
             </>
           )}
         </div>
+        {isDragging && (
+            <div 
+                className={cn(
+                    "absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-opacity",
+                    isDragging ? "opacity-100" : "opacity-0"
+                )}
+            >
+                <div className={cn(
+                    "flex flex-col items-center gap-4 rounded-lg border-2 border-dashed p-12 transition-colors",
+                    isDragValid ? "border-primary" : "border-destructive"
+                )}>
+                    <UploadCloud className={cn("h-12 w-12", isDragValid ? "text-primary" : "text-destructive")} />
+                    <p className={cn("text-lg font-semibold", isDragValid ? "text-primary" : "text-destructive")}>
+                        {isDragValid ? t('daDragDropValid') : t('daDragDropInvalid')}
+                    </p>
+                    <p className="text-sm text-muted-foreground">{t('daDragDropSupported')}</p>
+                </div>
+            </div>
+        )}
       </main>
     </div>
   );
