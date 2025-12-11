@@ -1,4 +1,3 @@
-@import 'handsontable/dist/handsontable.full.min.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -49,67 +48,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-.handsontable .htCore {
-  border-color: hsl(var(--border));
-}
-
-.handsontable .htDimmed {
-  color: hsl(var(--foreground));
-  background-color: hsl(var(--card));
-}
-
-.handsontable th, .handsontable td {
-  border-color: hsl(var(--border));
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-}
-
-.handsontable th {
-  background-color: hsl(var(--muted));
-  font-weight: 500;
-}
-
-.handsontable .ht__highlight {
-  background: hsl(var(--accent));
-}
-
-.handsontable .ht__active_highlight {
-  background: hsl(var(--accent));
-}
-
-.handsontable .ht__selection {
-  background: hsl(var(--primary) / 0.1);
-}
-
-.handsontable .htBorders .current,
-.handsontable .htBorders .area {
-  background: hsl(var(--primary));
-}
-
-/* Custom cell formatting */
-.ht-cell-bold {
-  font-weight: 700 !important;
-}
-
-.ht-cell-italic {
-  font-style: italic !important;
-}
-
-.ht-cell-underline {
-  text-decoration: underline !important;
-}
-
-/* Background Colors */
-.ht-bg-light-red { background-color: #F8D7DA !important; }
-.ht-bg-light-green { background-color: #D4EDDA !important; }
-.ht-bg-light-blue { background-color: #D1E7FF !important; }
-.ht-bg-light-yellow { background-color: #FFF3CD !important; }
-.ht-bg-light-gray { background-color: #f8f9fa !important; }
-
-/* Text Colors */
-.ht-text-dark-red { color: #721c24 !important; }
-.ht-text-dark-green { color: #155724 !important; }
-.ht-text-dark-blue { color: #004085 !important; }
-.ht-text-black { color: #000000 !important; }
-.ht-text-white { color: #ffffff !important; }
