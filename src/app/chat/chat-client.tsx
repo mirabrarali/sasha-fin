@@ -947,5 +947,3 @@ export default function ChatPageClient() {
     </div>
   );
 }
-
-    
