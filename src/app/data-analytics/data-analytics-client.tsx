@@ -29,8 +29,6 @@ import { cn } from '@/lib/utils';
 const Bar = dynamic(() => import('react-chartjs-2').then(mod => mod.Bar), { ssr: false });
 const Pie = dynamic(() => import('react-chartjs-2').then(mod => mod.Pie), { ssr: false });
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, ChartTooltip, Legend);
-
 const generateAndDownloadPdf = async (element: HTMLElement, fileName: string) => {
     try {
         const { default: jsPDF } = await import('jspdf');
@@ -132,7 +130,7 @@ export default function DataAnalyticsClient() {
     if (files && files.length > 0) {
       handleFileUpload({ target: { files } } as unknown as React.ChangeEvent<HTMLInputElement>);
     }
-  }, [handleFileUpload]);
+  }, []);
 
 
   useEffect(() => {
@@ -156,6 +154,7 @@ export default function DataAnalyticsClient() {
 
   useEffect(() => {
     setHasMounted(true);
+    ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, ChartTooltip, Legend);
   }, []);
 
   const handleClear = () => {
@@ -423,3 +422,5 @@ export default function DataAnalyticsClient() {
     </div>
   );
 }
+
+    
