@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -104,6 +103,62 @@ export default function ChatPageClient() {
   const [isNewSessionDialogOpen, setIsNewSessionDialogOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isDragValid, setIsDragValid] = useState(true);
+
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+                setInput(finalTranscript + interimTranscript);
+            };
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error', event.error);
+                toast({
+                  variant: 'destructive',
+                  title: 'Speech Recognition Error',
+                  description: event.error === 'not-allowed' ? 'Microphone access was denied.' : 'An error occurred during speech recognition.'
+                });
+                setIsListening(false);
+            };
+            recognition.onend = () => {
+                setIsListening(false);
+            };
+            recognitionRef.current = recognition;
+        } else {
+            console.warn('Speech Recognition not supported in this browser.');
+        }
+    }
+  }, [toast]);
+
+  const toggleListening = () => {
+      if (isListening) {
+          recognitionRef.current?.stop();
+          setIsListening(false);
+      } else {
+          if (recognitionRef.current) {
+              recognitionRef.current.lang = language === 'ar' ? 'ar-SA' : 'en-US';
+              recognitionRef.current.start();
+              setIsListening(true);
+          } else {
+              toast({ variant: 'destructive', title: 'Unsupported Browser', description: 'Speech recognition is not supported by your browser.' });
+          }
+      }
+  };
 
   const handleDragEvents = useCallback((e: DragEvent) => {
     e.preventDefault();
@@ -765,7 +820,7 @@ export default function ChatPageClient() {
                             </Tooltip>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                <Button type="button" variant="ghost" size="icon" className="h-9 w-9" disabled>
+                                <Button type="button" variant="ghost" size="icon" className={cn("h-9 w-9", isListening && "text-blue-500 shadow-inner shadow-blue-400/50")} onClick={toggleListening}>
                                     <Mic className="w-5 h-5" />
                                     <span className="sr-only">{t('micTooltip')}</span>
                                 </Button>

@@ -280,12 +280,30 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const dir = language === 'ar' ? 'rtl' : 'ltr';
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+        const browserLang = navigator.language.split('-')[0];
+        const storedLang = localStorage.getItem('abdullah-lang') as Language;
+
+        if (storedLang) {
+            setLanguage(storedLang);
+        } else if (browserLang === 'ar') {
+            setLanguage('ar');
+        }
+    }
+  }, []);
+  
+  useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = dir;
+    try {
+        localStorage.setItem('abdullah-lang', language);
+    } catch(e) {
+        console.error("Failed to save language preference to localStorage", e);
+    }
   }, [language, dir]);
 
   const t = (key: string, replacements?: { [key: string]: string | number }) => {
-    let translation = translations[language][key] || key;
+    let translation = translations[language][key] || translations['en'][key] || key;
     if (replacements) {
         Object.keys(replacements).forEach(rKey => {
             translation = translation.replace(`{{${rKey}}}`, String(replacements[rKey]));
