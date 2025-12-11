@@ -31,7 +31,7 @@ To change the model:
 ```typescript
 import {genkit} from 'genkit';
 // STEP 1: Uncomment the Groq import
-// import {groq} from '@genkit-ai/groq';
+import {groq} from '@genkit-ai/groq';
 import {googleAI} from '@genkit-ai/googleai';
 
 // This is the default configuration using Google's Gemini model
