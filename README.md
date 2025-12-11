@@ -1,75 +1,65 @@
-# Abdullah Banking - AI Model Switching Guide
+# Abdullah Banking - Financial AI Assistant
 
-This guide outlines the steps required to switch the underlying AI model for the chat functionality from the default Google Gemini to Llama 3.1 via the Groq provider.
+This is a Next.js application that provides an AI-powered financial assistant named Abdullah. Abdullah can analyze financial documents, assist with spreadsheet tasks, and engage in conversational chat about financial topics.
 
-## 1. Install the Groq Genkit Plugin
+## Core Features
 
-You will need to add the `@genkit-ai/groq` package to the project's dependencies.
+*   **Conversational Chat:** Engage with Abdullah for financial analysis, document queries, and general market discussion.
+*   **Document Analysis:** Upload PDF financial statements or CSV loan data for institutional-grade analysis and reporting.
+*   **Agentic Spreadsheet:** A fully-featured spreadsheet environment where Abdullah can be commanded via natural language to perform complex tasks like financial modeling, data entry, and chart creation.
+*   **Data Analytics Dashboard:** Upload a dataset (CSV, XLSX, PDF) and have Abdullah instantly generate a dashboard with summaries, key insights, and visualizations.
+*   **Customizable Knowledge Base:** Teach Abdullah specific rules, facts, and instructions that he will remember across all interactions.
+*   **Bilingual:** All features work seamlessly in both English and Arabic.
+
+## Tech Stack
+
+*   **Framework:** Next.js (App Router)
+*   **UI:** React, TypeScript, ShadCN UI, Tailwind CSS
+*   **AI/Generative:** Google Gemini via Genkit
+*   **Spreadsheet:** Handsontable
+*   **Charts:** Recharts, Chart.js
+
+## Getting Started
+
+To run the application locally, you will need to set up your environment.
+
+### 1. Install Dependencies
 
 ```bash
-npm install @genkit-ai/groq
+npm install
 ```
 
-## 2. Set Up Your Groq API Key
+### 2. Set Up Environment Variables
 
-Create a file named `.env` in the root of your project (if it doesn't exist) and add your Groq API key.
+Create a file named `.env` in the root of your project and add your Google Gemini API key. You can get a key from [Google AI Studio](https://aistudio.google.com/app/apikey).
 
 ```
-GROQ_API_KEY=YOUR_GROQ_API_KEY_HERE
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE
 ```
 
-## 3. Update the Genkit Configuration
+### 3. Run the Development Server
 
-In `src/ai/genkit.ts`, you will find the Genkit AI configuration. The file is already prepared for the switch.
+```bash
+npm run dev
+```
 
-To change the model:
-1.  Comment out the existing `googleAI` plugin configuration.
-2.  Uncomment the `groq` plugin configuration.
+The application will be available at `http://localhost:9002`.
 
-**Example `src/ai/genkit.ts`:**
+## Genkit AI Configuration
+
+The AI model is configured in `src/ai/genkit.ts`. By default, it uses the `gemini-1.5-flash-latest` model.
 
 ```typescript
+// src/ai/genkit.ts
 import {genkit} from 'genkit';
-// STEP 1: Uncomment the Groq import
-import {groq} from '@genkit-ai/groq';
 import {googleAI} from '@genkit-ai/googleai';
 
-// This is the default configuration using Google's Gemini model
 export const ai = genkit({
   plugins: [googleAI()],
-  model: 'googleai/gemini-2.0-flash',
+  model: 'googleai/gemini-1.5-flash-latest',
 });
-
-/*
-// STEP 2: To switch to Llama 3.1, comment out the configuration above
-// and uncomment the one below.
-
-export const ai = genkit({
-  plugins: [groq()],
-  model: 'gemma-7b-it', // Or 'llama3-70b-8192', 'llama3-8b-8192'
-});
-*/
 ```
 
-## 4. (Optional) Specify the Model in the Chat Flow
-
-By default, the application will use the model specified in the `genkit` configuration. However, if you want to explicitly set the model for the chat flow, you can do so in `src/ai/flows/chat.ts`.
-
-Find the `ai.generate` call within the `chatFlow` and modify the `model` parameter.
-
-**Example `src/ai/flows/chat.ts`:**
-
-```typescript
-    const {output} = await ai.generate({
-      // To explicitly use Llama 3.1, uncomment the next line
-      // model: 'llama3-70b-8192', 
-      system: systemPrompt,
-      messages: messages,
-      output: {
-        schema: ChatOutputSchema
-      },
-    });
-```
-
-By following these steps, you can seamlessly switch the chat functionality to use the Llama 3.1 model. All other features, such as PDF analysis, will continue to work as expected.
+All AI-powered logic (flows) can be found in the `src/ai/flows/` directory.
 # sasha-fin
+```

@@ -188,8 +188,6 @@ ${knowledgeBase || 'No custom instructions provided.'}
 4.  **When asked about a specific, real-time product from a bank (like from 'sib.om'), state that you don't have live access to their specific, current offerings but can explain what is typical for such products based on your expertise.`;
 
     const {output} = await ai.generate({
-      // To explicitly use Llama 3.1, uncomment the next line and set your desired model
-      // model: 'llama3-70b-8192', 
       system: systemPrompt,
       messages: messages,
       output: {
