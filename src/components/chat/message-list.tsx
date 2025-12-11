@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
@@ -58,7 +59,9 @@ export type Message = {
         data: number[];
       }[];
     }
-  }
+  };
+  suggestedPrompts?: string[];
+  isDemoPrompt?: boolean;
 };
 
 interface MessageListProps {
@@ -123,6 +126,11 @@ function ChatMessage({
   const isPlaying = nowPlaying === message.id;
 
   const handleTextToSpeech = () => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      alert('Text-to-speech is not supported in your browser.');
+      return;
+    }
+    
     if (isPlaying) {
       window.speechSynthesis.cancel();
       setNowPlaying(null);
@@ -139,7 +147,7 @@ function ChatMessage({
     const voices = window.speechSynthesis.getVoices();
     let selectedVoice = voices.find(
       (voice) =>
-        voice.lang.startsWith(language) && voice.name.includes('Female')
+        voice.lang.startsWith(language) && /female/i.test(voice.name)
     );
 
     // Fallback if no female voice is found

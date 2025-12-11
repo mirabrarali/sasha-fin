@@ -1,10 +1,11 @@
+
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
-import { CornerDownLeft, Mic, FileUp, FileText, XCircle, Loader2, RefreshCw, UploadCloud } from 'lucide-react';
+import { CornerDownLeft, Mic, FileUp, FileText, XCircle, Loader2, RefreshCw, UploadCloud, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -31,6 +32,13 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { AbdullahStatus } from '@/components/abdullah-status';
 import { cn } from '@/lib/utils';
 
+
+// Add this interface to fix the TypeScript error for SpeechRecognition
+declare global {
+  interface Window {
+    webkitSpeechRecognition: any;
+  }
+}
 
 const generateAndDownloadPdf = async (element: HTMLElement, fileName: string) => {
     try {
@@ -287,14 +295,14 @@ export default function ChatPageClient() {
     }
   }, [pdfRenderContent, t, toast, downloadInfo]);
   
-  const handleSendMessage = async (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent, messageOverride?: string) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    const currentInput = messageOverride || input;
+    if (!currentInput.trim() || isLoading) return;
 
-    const newUserMessage: Message = { id: Date.now().toString(), role: 'user', content: input };
+    const newUserMessage: Message = { id: Date.now().toString(), role: 'user', content: currentInput };
     const newMessages = [...messages, newUserMessage];
     setMessages(newMessages);
-    const currentInput = input;
     setInput('');
     setIsLoading(true);
 
@@ -324,11 +332,14 @@ export default function ChatPageClient() {
       } else {
         const historyForApi = newMessages.map(({ id, analysisReport, financialReport, imageUrl, chart, ...rest }) => rest);
         const response = await chat({ history: historyForApi, pdfDataUri: pdfData, csvData: csvData, language });
+        
         const botResponse: Message = {
           id: Date.now().toString(),
           role: 'assistant',
           content: response.content,
-          chart: response.chart
+          chart: response.chart,
+          suggestedPrompts: response.suggestedPrompts,
+          isDemoPrompt: response.isDemoPrompt,
         };
         
         setMessages(prev => [...prev, botResponse]);
@@ -606,6 +617,11 @@ export default function ChatPageClient() {
     });
     setIsNewSessionDialogOpen(false);
   };
+  
+  const lastMessage = messages[messages.length - 1];
+  const suggestedPrompts = lastMessage?.role === 'assistant' && lastMessage.suggestedPrompts;
+  const isDemoPrompt = lastMessage?.role === 'assistant' && lastMessage.isDemoPrompt;
+
 
   const PdfReportComponent = ({ report, type, lang }: { report: ReportToDownload; type: ReportType; lang: 'en' | 'ar' }) => {
     const selectedTitles = getTranslatedTitles(lang, report);
@@ -744,6 +760,33 @@ export default function ChatPageClient() {
                   </main>
                   <footer className="p-4 border-t shrink-0 bg-background">
                     <div className="max-w-3xl mx-auto">
+                      {isDemoPrompt ? (
+                          <div className="mb-2 flex items-center justify-center gap-4">
+                              <Button variant="outline" asChild>
+                                  <a href="mailto:alimirabrar@gmail.com">
+                                      <Mail className="mr-2 h-4 w-4" /> {t('scheduleDemoEmail')}
+                                  </a>
+                              </Button>
+                              <Button variant="outline" asChild>
+                                  <a href="tel:+919676649442">
+                                      <Phone className="mr-2 h-4 w-4" /> {t('scheduleDemoCall')}
+                                  </a>
+                              </Button>
+                          </div>
+                      ) : suggestedPrompts && !isLoading && (
+                        <div className="mb-2 flex flex-wrap items-center justify-center gap-2">
+                          {suggestedPrompts.map((prompt: string, i: number) => (
+                              <Button 
+                                  key={i} 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={(e) => handleSendMessage(e, prompt)}
+                              >
+                                  {prompt}
+                              </Button>
+                          ))}
+                        </div>
+                      )}
                       {csvFileName && (
                           <div className="flex items-center justify-between p-2 mb-2 text-sm rounded-md bg-muted text-muted-foreground">
                           <div className="flex items-center gap-2 truncate">
