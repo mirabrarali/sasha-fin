@@ -105,23 +105,33 @@ export default function ChatPageClient() {
   const [isDragValid, setIsDragValid] = useState(true);
 
   
-  const handleDragEvents = useCallback((e: DragEvent) => {
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setIsDragging(true);
-      const items = e.dataTransfer?.items;
-      if (items && items.length > 0) {
-        const fileType = items[0].type;
-        setIsDragValid(fileType === 'application/pdf' || fileType === 'text/csv' || fileType === 'application/vnd.ms-excel' || fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      }
-    } else { // dragleave, drop
-      setIsDragging(false);
+    setIsDragging(true);
+    const items = e.dataTransfer?.items;
+    if (items && items.length > 0) {
+      const fileType = items[0].type;
+      setIsDragValid(fileType === 'application/pdf' || fileType === 'text/csv' || fileType === 'application/vnd.ms-excel' || fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     }
   }, []);
 
-  const handleDrop = useCallback((e: DragEvent) => {
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Use a timeout to prevent flickering when moving over child elements
+    setTimeout(() => {
+        setIsDragging(false);
+    }, 50);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
@@ -145,25 +155,6 @@ export default function ChatPageClient() {
     }
   }, [t, toast]);
 
-
-  useEffect(() => {
-    const mainElement = document.getElementById('chat-main');
-    if (mainElement) {
-        mainElement.addEventListener('dragenter', handleDragEvents);
-        mainElement.addEventListener('dragover', handleDragEvents);
-        mainElement.addEventListener('dragleave', handleDragEvents);
-        mainElement.addEventListener('drop', handleDrop);
-    }
-    
-    return () => {
-        if (mainElement) {
-            mainElement.removeEventListener('dragenter', handleDragEvents);
-            mainElement.removeEventListener('dragover', handleDragEvents);
-            mainElement.removeEventListener('dragleave', handleDragEvents);
-            mainElement.removeEventListener('drop', handleDrop);
-        }
-    };
-  }, [handleDragEvents, handleDrop]);
 
   useEffect(() => {
     setHasMounted(true);
@@ -267,7 +258,7 @@ export default function ChatPageClient() {
         setMessages(prev => [...prev, analysisMessage]);
 
       } else {
-        const historyForApi = newMessages.map(({ id, analysisReport, financialReport, imageUrl, chart, ...rest }) => rest);
+        const historyForApi = newMessages.map(({ id, analysisReport, financialReport, ...rest }) => rest);
         const response = await chat({ history: historyForApi, pdfDataUri: pdfData, csvData: csvData, language });
         
         const botResponse: Message = {
@@ -678,7 +669,13 @@ export default function ChatPageClient() {
                   <LanguageToggle />
                 </div>
               </header>
-              <div className="relative flex-1 overflow-hidden">
+              <div 
+                className="relative flex-1 overflow-hidden"
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+              >
                 <div className="h-full flex flex-col animate-in fade-in-50 duration-500">
                   <main id="chat-main" className="flex-1 overflow-y-auto">
                       <MessageList 
@@ -813,7 +810,7 @@ export default function ChatPageClient() {
             {isDragging && (
                 <div 
                     className={cn(
-                        "absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-opacity",
+                        "pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-opacity",
                         isDragging ? "opacity-100" : "opacity-0"
                     )}
                 >
