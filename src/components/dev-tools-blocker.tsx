@@ -3,55 +3,17 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '@/context/language-context';
-import { ShieldAlert, RefreshCw, Copy, ClipboardPaste } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { ShieldAlert } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 export function DevToolsBlocker() {
     const { t, dir } = useLanguage();
-    const { toast } = useToast();
     const [isDevToolsOpen, setIsDevToolsOpen] = useState(false);
-    const [contextMenu, setContextMenu] = useState<{ x: number, y: number } | null>(null);
     const isMobile = useIsMobile();
 
     const handleDevToolsChange = useCallback((isOpen: boolean) => {
         setIsDevToolsOpen(isOpen);
     }, []);
-
-    const handleRefresh = () => window.location.reload();
-
-    const handleCopy = async () => {
-        const text = window.getSelection()?.toString();
-        if (text) {
-            await navigator.clipboard.writeText(text);
-            toast({ title: 'Text copied to clipboard' });
-        } else {
-            toast({ variant: 'destructive', title: 'Nothing to copy', description: 'Please select text to copy.' });
-        }
-    };
-
-    const handlePaste = async () => {
-        try {
-            const text = await navigator.clipboard.readText();
-            const activeElement = document.activeElement as HTMLElement;
-            if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
-                (activeElement as HTMLInputElement | HTMLTextAreaElement).value += text;
-            } else {
-                 toast({ variant: 'destructive', title: 'Cannot paste', description: 'Please focus an input field to paste text.' });
-            }
-        } catch (err) {
-            console.error('Failed to read clipboard contents: ', err);
-            toast({ variant: 'destructive', title: 'Paste failed', description: 'Could not read from clipboard. Please check permissions.' });
-        }
-    };
-    
-    const menuItems = [
-        { label: 'Refresh', icon: RefreshCw, action: handleRefresh },
-        { label: 'Copy', icon: Copy, action: handleCopy },
-        { label: 'Paste', icon: ClipboardPaste, action: handlePaste },
-    ];
-
 
     useEffect(() => {
         const threshold = 160;
@@ -84,17 +46,12 @@ export function DevToolsBlocker() {
         };
 
         const handleContextMenu = (event: MouseEvent) => {
-            event.preventDefault();
-            setContextMenu({ x: event.clientX, y: event.clientY });
-        };
-
-        const handleClick = () => {
-            if (contextMenu) setContextMenu(null);
+            // We're just logging to the console now, not preventing the default menu.
         };
 
         window.addEventListener('keydown', handleKeyDown);
-        window.addEventListener('contextmenu', handleContextMenu);
-        window.addEventListener('click', handleClick);
+        // We no longer prevent the default context menu.
+        // window.addEventListener('contextmenu', handleContextMenu);
 
         console.log(
             "%cHello!",
@@ -108,10 +65,9 @@ export function DevToolsBlocker() {
         return () => {
             clearInterval(interval);
             window.removeEventListener('keydown', handleKeyDown);
-            window.removeEventListener('contextmenu', handleContextMenu);
-            window.removeEventListener('click', handleClick);
+            // window.removeEventListener('contextmenu', handleContextMenu);
         };
-    }, [handleDevToolsChange, t, contextMenu, isMobile]);
+    }, [handleDevToolsChange, t, isMobile]);
 
     if (isDevToolsOpen) {
         return (
@@ -130,32 +86,6 @@ export function DevToolsBlocker() {
                         {t('devToolsDescription')}
                     </p>
                 </div>
-            </div>
-        );
-    }
-    
-    if (contextMenu) {
-        return (
-            <div
-                style={{ top: contextMenu.y, left: contextMenu.x }}
-                className="fixed z-[9999] bg-background border border-border rounded-md shadow-lg py-1 w-40 animate-in fade-in-50 duration-100"
-            >
-                <ul>
-                    {menuItems.map(({ label, icon: Icon, action }) => (
-                        <li key={label}>
-                            <button
-                                onClick={() => {
-                                    action();
-                                    setContextMenu(null);
-                                }}
-                                className="flex items-center w-full px-3 py-2 text-sm text-foreground hover:bg-accent"
-                            >
-                                <Icon className="w-4 h-4 mr-2" />
-                                <span>{label}</span>
-                            </button>
-                        </li>
-                    ))}
-                </ul>
             </div>
         );
     }
