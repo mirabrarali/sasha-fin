@@ -6,12 +6,14 @@ import { useLanguage } from '@/context/language-context';
 import { ShieldAlert, RefreshCw, Copy, ClipboardPaste } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export function DevToolsBlocker() {
     const { t, dir } = useLanguage();
     const { toast } = useToast();
     const [isDevToolsOpen, setIsDevToolsOpen] = useState(false);
     const [contextMenu, setContextMenu] = useState<{ x: number, y: number } | null>(null);
+    const isMobile = useIsMobile();
 
     const handleDevToolsChange = useCallback((isOpen: boolean) => {
         setIsDevToolsOpen(isOpen);
@@ -55,6 +57,9 @@ export function DevToolsBlocker() {
         const threshold = 160;
 
         const checkDevTools = () => {
+            // This resize check is unreliable on mobile and causes false positives.
+            if (isMobile) return;
+
             const widthThreshold = window.outerWidth - window.innerWidth > threshold;
             const heightThreshold = window.outerHeight - window.innerHeight > threshold;
             
@@ -106,7 +111,7 @@ export function DevToolsBlocker() {
             window.removeEventListener('contextmenu', handleContextMenu);
             window.removeEventListener('click', handleClick);
         };
-    }, [handleDevToolsChange, t, contextMenu]);
+    }, [handleDevToolsChange, t, contextMenu, isMobile]);
 
     if (isDevToolsOpen) {
         return (
