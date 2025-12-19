@@ -5,7 +5,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
-import { CornerDownLeft, FileUp, FileText, XCircle, Loader2, RefreshCw, UploadCloud, Mail, Phone, Mic, Speaker } from 'lucide-react';
+import { CornerDownLeft, FileUp, FileText, XCircle, Loader2, RefreshCw, UploadCloud, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -31,6 +31,7 @@ import { useLanguage } from '@/context/language-context';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { AbdullahStatus } from '@/components/abdullah-status';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 
 const generateAndDownloadPdf = async (element: HTMLElement, fileName: string) => {
     try {
@@ -72,6 +73,53 @@ type ReportToDownload = NonNullable<Message['analysisReport'] | Message['financi
 type ReportType = 'loan' | 'financial';
 
 
+const PinInput = ({ onPinEntered }: { onPinEntered: (isCorrect: boolean) => void }) => {
+    const { t } = useLanguage();
+    const [pin, setPin] = useState('');
+    const [error, setError] = useState(false);
+    const correctPin = '2661';
+
+    const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newPin = e.target.value;
+        if (/^\d{0,4}$/.test(newPin)) {
+            setPin(newPin);
+            setError(false);
+            if (newPin.length === 4) {
+                if (newPin === correctPin) {
+                    onPinEntered(true);
+                } else {
+                    setError(true);
+                    setTimeout(() => setPin(''), 500);
+                }
+            }
+        }
+    };
+
+    return (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-4 text-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full border bg-card">
+                    <KeyRound className="h-8 w-8 text-primary" />
+                </div>
+                <h2 className="text-2xl font-bold tracking-tight">{t('pinTitle')}</h2>
+                <p className="max-w-xs text-muted-foreground">{t('pinDescription')}</p>
+                <div className={cn("flex gap-2", error && 'animate-in fade-in-0 shake-sm')}>
+                    <Input 
+                        type="password"
+                        value={pin}
+                        onChange={handlePinChange}
+                        maxLength={4}
+                        className="h-14 w-32 text-center text-2xl font-mono tracking-widest"
+                        placeholder="----"
+                        autoFocus
+                    />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 export default function ChatPageClient() {
   const { t, language, dir } = useLanguage();
   const [hasMounted, setHasMounted] = useState(false);
@@ -79,6 +127,7 @@ export default function ChatPageClient() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [csvData, setCsvData] = useState<string | null>(null);
   const [csvFileName, setCsvFileName] = useState<string | null>(null);
@@ -104,8 +153,7 @@ export default function ChatPageClient() {
   const [isDragging, setIsDragging] = useState(false);
   const [isDragValid, setIsDragValid] = useState(true);
 
-  
-  const handleDragEnter = useCallback((e: React.DragEvent) => {
+  const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
@@ -114,24 +162,20 @@ export default function ChatPageClient() {
       const fileType = items[0].type;
       setIsDragValid(fileType === 'application/pdf' || fileType === 'text/csv' || fileType === 'application/vnd.ms-excel' || fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     }
-  }, []);
+  };
 
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
+  const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Use a timeout to prevent flickering when moving over child elements
-    setTimeout(() => {
-        setIsDragging(false);
-    }, 50);
-  }, []);
+    setTimeout(() => setIsDragging(false), 200);
+  };
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-  }, []);
+  };
 
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
@@ -141,9 +185,12 @@ export default function ChatPageClient() {
       const file = files[0];
       const fileType = file.type;
       
-      if (fileType === 'application/pdf') {
+      const isCsv = fileType === 'text/csv' || fileType === 'application/vnd.ms-excel' || fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      const isPdf = fileType === 'application/pdf';
+
+      if (isPdf) {
         handlePdfUpload({ target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>);
-      } else if (fileType === 'text/csv' || fileType === 'application/vnd.ms-excel' || fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+      } else if (isCsv) {
         handleFileUpload({ target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>);
       } else {
         toast({
@@ -153,8 +200,8 @@ export default function ChatPageClient() {
         });
       }
     }
-  }, [t, toast]);
-
+  };
+  
 
   useEffect(() => {
     setHasMounted(true);
@@ -536,6 +583,7 @@ export default function ChatPageClient() {
 
     setInput('');
     setIsLoading(false);
+    setIsUnlocked(false);
 
     toast({
         title: t('newSessionTitle'),
@@ -676,7 +724,9 @@ export default function ChatPageClient() {
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
               >
-                <div className="h-full flex flex-col animate-in fade-in-50 duration-500">
+                {!isUnlocked && <PinInput onPinEntered={setIsUnlocked} />}
+
+                <div className={cn("h-full flex flex-col animate-in fade-in-50 duration-500", !isUnlocked && "pointer-events-none blur-sm")}>
                   <main id="chat-main" className="flex-1 overflow-y-auto">
                       <MessageList 
                       messages={messages} 

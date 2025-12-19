@@ -160,6 +160,10 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     daDragDropInvalid: "Unsupported file type",
     daDragDropSupported: "Supported: CSV, XLSX, PDF",
     daAnalysisFailedDesc: "Could not generate dashboard. Check the file format or try a different file.",
+    
+    // PIN Lock
+    pinTitle: 'PIN Required',
+    pinDescription: 'Please enter your PIN to access the chat.',
   },
   ar: {
     pageTitle: 'عبدالله المصرفية',
@@ -308,6 +312,10 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     daDragDropInvalid: "نوع ملف غير مدعوم",
     daDragDropSupported: "المدعومة: CSV ، XLSX ، PDF",
     daAnalysisFailedDesc: "تعذر إنشاء لوحة المعلومات. تحقق من تنسيق الملف أو جرب ملفًا مختلفًا.",
+    
+    // PIN Lock
+    pinTitle: 'الرجاء إدخال الرقم السري',
+    pinDescription: 'الرجاء إدخال الرقم السري للوصول إلى الدردشة.',
   },
 };
 
