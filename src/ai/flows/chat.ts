@@ -94,9 +94,10 @@ async function processAndIndexDocument(docId: string, content: string, type: 'pd
   }
 
   if (chunks.length > 0) {
-    const {embeddings} = await ai.embed({
+    const embeddingResponse = await ai.embed({
       content: chunks,
     });
+    const embeddings = embeddingResponse.map(e => e.embedding);
     documentStore[docId] = { chunks, embeddings };
   }
 }
@@ -117,10 +118,11 @@ async function retrieveRelevantChunks(query: string, docId: string): Promise<str
     const store = documentStore[docId];
     if (!store) return "";
 
-    const { embeddings: queryEmbedding } = await ai.embed({ content: query });
+    const queryEmbeddingResponse = await ai.embed({ content: query });
+    const queryEmbedding = queryEmbeddingResponse[0].embedding;
     
     const similarities = store.embeddings.map(chunkEmbedding => 
-        cosineSimilarity(queryEmbedding[0], chunkEmbedding)
+        cosineSimilarity(queryEmbedding, chunkEmbedding)
     );
     
     const sortedChunks = store.chunks
