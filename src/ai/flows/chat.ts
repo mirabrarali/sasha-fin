@@ -251,5 +251,3 @@ ${knowledgeBase || 'No custom instructions provided.'}
     return output!;
   }
 );
-
-    
