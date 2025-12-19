@@ -94,9 +94,13 @@ async function processAndIndexDocument(docId: string, content: string, type: 'pd
   }
 
   if (chunks.length > 0) {
-    const requests = chunks.map(c => ({ content: c }));
-    const embeddingResponse = await ai.embed(requests);
-    const embeddings = embeddingResponse.map(e => e.embedding);
+    const embeddings: number[][] = [];
+    for (const chunk of chunks) {
+      const response = await ai.embed({
+        content: chunk,
+      });
+      embeddings.push(response[0].embedding);
+    }
     documentStore[docId] = { chunks, embeddings };
   }
 }
@@ -250,3 +254,5 @@ ${knowledgeBase || 'No custom instructions provided.'}
     return output!;
   }
 );
+
+    
