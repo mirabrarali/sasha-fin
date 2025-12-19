@@ -95,7 +95,7 @@ async function processAndIndexDocument(docId: string, content: string, type: 'pd
 
   if (chunks.length > 0) {
     const embeddingResponse = await ai.embed({
-      content: chunks,
+      content: chunks.map(c => ({text: c})),
     });
     const embeddings = embeddingResponse.map(e => e.embedding);
     documentStore[docId] = { chunks, embeddings };
