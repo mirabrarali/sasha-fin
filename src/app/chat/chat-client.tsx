@@ -185,12 +185,12 @@ export default function ChatPageClient() {
       const file = files[0];
       const fileType = file.type;
       
-      const isCsv = fileType === 'text/csv' || fileType === 'application/vnd.ms-excel' || fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      const isCsvOrXlsx = fileType === 'text/csv' || fileType === 'application/vnd.ms-excel' || fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
       const isPdf = fileType === 'application/pdf';
 
       if (isPdf) {
         handlePdfUpload({ target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>);
-      } else if (isCsv) {
+      } else if (isCsvOrXlsx) {
         handleFileUpload({ target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>);
       } else {
         toast({
@@ -360,6 +360,7 @@ export default function ChatPageClient() {
                 const worksheet = workbook.Sheets[sheetName];
                 csvString = XLSX.utils.sheet_to_csv(worksheet);
             } else {
+                // For CSV, we need to handle different encodings, but for now, assume UTF-8
                 csvString = data as string;
             }
 
@@ -382,7 +383,7 @@ export default function ChatPageClient() {
     if (file.name.endsWith('.xlsx')) {
         reader.readAsBinaryString(file);
     } else {
-        reader.readAsText(file);
+        reader.readAsText(file); // FileReader's readAsText handles encoding better
     }
   };
 
@@ -887,3 +888,5 @@ export default function ChatPageClient() {
     </div>
   );
 }
+
+    

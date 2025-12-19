@@ -3,6 +3,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import * as XLSX from 'xlsx';
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -105,23 +106,29 @@ export default function DataAnalyticsClient() {
   const [isDragging, setIsDragging] = useState(false);
   const [isDragValid, setIsDragValid] = useState(true);
 
-  const handleDragEvents = useCallback((e: DragEvent) => {
+  const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setIsDragging(true);
-      const items = e.dataTransfer?.items;
-      if (items && items.length > 0) {
-        const fileType = items[0].type;
-        setIsDragValid(fileType === 'application/pdf' || fileType === 'text/csv' || fileType === 'application/vnd.ms-excel' || fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      }
-    } else { // dragleave, drop
-      setIsDragging(false);
+    setIsDragging(true);
+    const items = e.dataTransfer?.items;
+    if (items && items.length > 0) {
+      const fileType = items[0].type;
+      setIsDragValid(fileType === 'application/pdf' || fileType === 'text/csv' || fileType === 'application/vnd.ms-excel' || fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     }
-  }, []);
+  };
 
-  const handleDrop = useCallback((e: DragEvent) => {
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setTimeout(() => setIsDragging(false), 200);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
@@ -130,27 +137,7 @@ export default function DataAnalyticsClient() {
     if (files && files.length > 0) {
       handleFileUpload({ target: { files } } as unknown as React.ChangeEvent<HTMLInputElement>);
     }
-  }, []);
-
-
-  useEffect(() => {
-    const mainElement = document.getElementById('da-main');
-    if (mainElement) {
-        mainElement.addEventListener('dragenter', handleDragEvents);
-        mainElement.addEventListener('dragover', handleDragEvents);
-        mainElement.addEventListener('dragleave', handleDragEvents);
-        mainElement.addEventListener('drop', handleDrop);
-    }
-    
-    return () => {
-        if (mainElement) {
-            mainElement.removeEventListener('dragenter', handleDragEvents);
-            mainElement.removeEventListener('dragover', handleDragEvents);
-            mainElement.removeEventListener('dragleave', handleDragEvents);
-            mainElement.removeEventListener('drop', handleDrop);
-        }
-    };
-  }, [handleDragEvents, handleDrop]);
+  };
 
   useEffect(() => {
     setHasMounted(true);
@@ -302,7 +289,14 @@ export default function DataAnalyticsClient() {
         </div>
       </header>
 
-      <main id="da-main" className="relative flex-1 overflow-auto p-4 md:p-8">
+      <main 
+        id="da-main"
+        className="relative flex-1 overflow-auto p-4 md:p-8"
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
         <div className="max-w-7xl mx-auto space-y-6">
           {!fileName ? (
                 <div className="w-full pt-8 md:pt-16 flex justify-center animate-in fade-in-50 duration-500">
@@ -402,7 +396,7 @@ export default function DataAnalyticsClient() {
         {isDragging && (
             <div 
                 className={cn(
-                    "absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-opacity",
+                    "pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm transition-opacity",
                     isDragging ? "opacity-100" : "opacity-0"
                 )}
             >

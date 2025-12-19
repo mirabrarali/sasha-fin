@@ -77,14 +77,19 @@ async function processAndIndexDocument(docId: string, content: string, type: 'pd
     // A more advanced implementation would use a proper PDF text extractor.
     chunks = content.match(/[\s\S]{1,1000}/g) || [];
   } else if (type === 'csv') {
-    // Chunk CSV by rows
+    // Chunk CSV by rows, ensuring the header is in each chunk for context.
     const rows = content.split('\n');
-    const header = rows[0];
-    const dataRows = rows.slice(1);
-    const chunkSize = 10; // 10 rows per chunk
-    for (let i = 0; i < dataRows.length; i += chunkSize) {
-      const chunkRows = dataRows.slice(i, i + chunkSize);
-      chunks.push([header, ...chunkRows].join('\n'));
+    if (rows.length < 2) {
+      chunks.push(content);
+    } else {
+      const header = rows[0];
+      const dataRows = rows.slice(1);
+      const chunkSize = 10; // 10 rows per chunk
+      for (let i = 0; i < dataRows.length; i += chunkSize) {
+        const chunkRows = dataRows.slice(i, i + chunkSize);
+        // Each chunk contains the header and a slice of data rows
+        chunks.push([header, ...chunkRows].join('\n'));
+      }
     }
   }
 
@@ -147,14 +152,13 @@ const chatFlow = ai.defineFlow(
     const lastUserMessage = input.history[input.history.length - 1]?.content || "";
     let documentContext = "";
 
-    // Process and index documents if they exist
+    // Process and index documents if they exist.
+    // The docId is kept simple ("session_pdf", "session_csv") because we only deal with one of each at a time.
     if (input.pdfDataUri) {
-      // Note: A real implementation would extract text from the PDF data URI.
-      // For this example, we'll treat the URI itself as a stand-in for content to be indexed.
-      // This part needs a library like pdf-parse on the server side.
-      // We will use a placeholder for the content for now.
-      const pdfContent = "Extracted PDF content would go here. The user uploaded a financial document.";
       const docId = 'session_pdf';
+      // A real implementation would extract text from the PDF data URI.
+      // For this example, we'll use a placeholder for the content for demonstration.
+      const pdfContent = "Extracted PDF content placeholder. The user uploaded a financial document.";
       await processAndIndexDocument(docId, pdfContent, 'pdf');
       documentContext = await retrieveRelevantChunks(lastUserMessage, docId);
     }
@@ -179,7 +183,7 @@ const chatFlow = ai.defineFlow(
                 text: `Use ONLY the following information to answer the user's question. If the information is not in the context, say that you cannot find the answer in the provided document.\n\nCONTEXT:\n---\n${documentContext}\n---`
             }]
         });
-    } else if (input.pdfDataUri) {
+    } else if (input.pdfDataUri) { // Fallback for when RAG might not find chunks, but a PDF is present
         messages.unshift({
           role: 'user',
           content: [
@@ -189,12 +193,12 @@ const chatFlow = ai.defineFlow(
             {media: {url: input.pdfDataUri}},
           ],
         });
-    } else if (input.csvData) {
+    } else if (input.csvData) { // Fallback for CSV
       messages.unshift({
         role: 'user',
         content: [
           {
-            text: `Use the following CSV data as context for our conversation. The user can ask me to analyze a specific loan by its ID. Do not analyze it unless asked. I can also be asked to generate charts from this data.\n\n\`\`\`csv\n${input.csvData}\n\`\`\``,
+            text: `The user has ALREADY uploaded a CSV file with the following data. Use this as context for our conversation. The user can ask me to analyze a specific loan by its ID, or ask general questions about the data. I can also be asked to generate charts from this data.\n\n\`\`\`csv\n${input.csvData}\n\`\`\``,
           },
         ],
       });
@@ -245,3 +249,5 @@ ${knowledgeBase || 'No custom instructions provided.'}
     return output!;
   }
 );
+
+    
