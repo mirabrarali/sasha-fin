@@ -59,53 +59,71 @@ const ChatOutputSchema = z.object({
 });
 export type ChatOutput = z.infer<typeof ChatOutputSchema>;
 
-/*
-// IBM Db2 Integration Example:
-// To enable database interaction, first, install the 'ibm_db' driver.
-// `npm install ibm_db`
-// Then, uncomment the code below and configure your connection details.
-
-import * as ibmdb from 'ibm_db';
-
-const db2ConnectionString = "DATABASE=your_db;HOSTNAME=your_host;UID=your_user;PWD=your_pass;PORT=your_port;PROTOCOL=TCPIP";
-
-const queryDb2Database = ai.defineTool(
-    {
-        name: 'queryDb2Database',
-        description: 'Queries the corporate IBM Db2 database to answer questions about customers, accounts, or transactions. Use this for any question that requires specific internal data.',
-        inputSchema: z.object({
-            query: z.string().describe('A syntactically correct SQL query for IBM Db2.'),
-        }),
-        outputSchema: z.string().describe('The query result as a JSON string.'),
-    },
-    async ({ query }) => {
-        return new Promise((resolve, reject) => {
-            ibmdb.open(db2ConnectionString, (err, conn) => {
-                if (err) {
-                    console.error("IBM Db2 connection error: ", err.message);
-                    return reject(new Error('Failed to connect to the database.'));
-                }
-
-                conn.query(query, (err, data) => {
-                    if (err) {
-                        console.error("IBM Db2 query error: ", err.message);
-                        reject(new Error('The database query failed.'));
-                    } else {
-                        resolve(JSON.stringify(data));
-                    }
-                    conn.close(() => {
-                        console.log('IBM Db2 connection closed.');
-                    });
-                });
-            });
-        });
-    }
-);
-*/
-
-
 export async function chat(input: ChatInput): Promise<ChatOutput> {
   return chatFlow(input);
+}
+
+// In-memory store for document chunks and embeddings
+const documentStore: {
+  [key: string]: { chunks: string[]; embeddings: number[][] };
+} = {};
+
+async function processAndIndexDocument(docId: string, content: string, type: 'pdf' | 'csv') {
+  if (documentStore[docId]) return; // Already indexed
+
+  let chunks: string[] = [];
+  if (type === 'pdf') {
+    // Simple chunking for text content, assuming PDF is extracted as text.
+    // A more advanced implementation would use a proper PDF text extractor.
+    chunks = content.match(/[\s\S]{1,1000}/g) || [];
+  } else if (type === 'csv') {
+    // Chunk CSV by rows
+    const rows = content.split('\n');
+    const header = rows[0];
+    const dataRows = rows.slice(1);
+    const chunkSize = 10; // 10 rows per chunk
+    for (let i = 0; i < dataRows.length; i += chunkSize) {
+      const chunkRows = dataRows.slice(i, i + chunkSize);
+      chunks.push([header, ...chunkRows].join('\n'));
+    }
+  }
+
+  if (chunks.length > 0) {
+    const {embeddings} = await ai.embed({
+      content: chunks,
+    });
+    documentStore[docId] = { chunks, embeddings };
+  }
+}
+
+function cosineSimilarity(vecA: number[], vecB: number[]): number {
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+    for (let i = 0; i < vecA.length; i++) {
+        dotProduct += vecA[i] * vecB[i];
+        normA += vecA[i] * vecA[i];
+        normB += vecB[i] * vecB[i];
+    }
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+async function retrieveRelevantChunks(query: string, docId: string): Promise<string> {
+    const store = documentStore[docId];
+    if (!store) return "";
+
+    const { embeddings: queryEmbedding } = await ai.embed({ content: query });
+    
+    const similarities = store.embeddings.map(chunkEmbedding => 
+        cosineSimilarity(queryEmbedding[0], chunkEmbedding)
+    );
+    
+    const sortedChunks = store.chunks
+        .map((chunk, index) => ({ chunk, similarity: similarities[index] }))
+        .sort((a, b) => b.similarity - a.similarity);
+    
+    // Return top 3 most relevant chunks
+    return sortedChunks.slice(0, 3).map(c => c.chunk).join('\n\n---\n\n');
 }
 
 const chatFlow = ai.defineFlow(
@@ -125,15 +143,53 @@ const chatFlow = ai.defineFlow(
           "I'm here to help. How can I assist with your banking needs?",
       };
     }
+    
+    const lastUserMessage = input.history[input.history.length - 1]?.content || "";
+    let documentContext = "";
 
+    // Process and index documents if they exist
+    if (input.pdfDataUri) {
+      // Note: A real implementation would extract text from the PDF data URI.
+      // For this example, we'll treat the URI itself as a stand-in for content to be indexed.
+      // This part needs a library like pdf-parse on the server side.
+      // We will use a placeholder for the content for now.
+      const pdfContent = "Extracted PDF content would go here. The user uploaded a financial document.";
+      const docId = 'session_pdf';
+      await processAndIndexDocument(docId, pdfContent, 'pdf');
+      documentContext = await retrieveRelevantChunks(lastUserMessage, docId);
+    }
+    if (input.csvData) {
+      const docId = 'session_csv';
+      await processAndIndexDocument(docId, input.csvData, 'csv');
+      documentContext = await retrieveRelevantChunks(lastUserMessage, docId);
+    }
+    
     const messages: MessageData[] = input.history
       .slice(firstUserMessageIndex)
       .map((message) => ({
         role: message.role === 'assistant' ? 'model' : 'user',
         content: [{text: message.content}],
       }));
-
-    if (input.csvData) {
+    
+    // Add retrieved context to the start of the message history for the AI
+    if (documentContext) {
+        messages.unshift({
+            role: 'user', // Posing as user instruction/context
+            content: [{
+                text: `Use ONLY the following information to answer the user's question. If the information is not in the context, say that you cannot find the answer in the provided document.\n\nCONTEXT:\n---\n${documentContext}\n---`
+            }]
+        });
+    } else if (input.pdfDataUri) {
+        messages.unshift({
+          role: 'user',
+          content: [
+            {
+              text: 'The user has ALREADY uploaded the following PDF. I have ALREADY analyzed it and provided a report card. For the rest of the conversation, this document is the primary context. Answer questions based on its content, and if asked to create a chart or graph, use the data from this document.',
+            },
+            {media: {url: input.pdfDataUri}},
+          ],
+        });
+    } else if (input.csvData) {
       messages.unshift({
         role: 'user',
         content: [
@@ -144,17 +200,6 @@ const chatFlow = ai.defineFlow(
       });
     }
 
-    if (input.pdfDataUri) {
-        messages.unshift({
-          role: 'user',
-          content: [
-            {
-              text: 'The user has ALREADY uploaded the following PDF. I have ALREADY analyzed it and provided a report card. For the rest of the conversation, this document is the primary context. Answer questions based on its content, and if asked to create a chart or graph, use the data from this document.',
-            },
-            {media: {url: input.pdfDataUri}},
-          ],
-        });
-    }
 
     const knowledgeBase = await getKnowledge();
     const systemPrompt = `You are Abdullah, a premier AI financial entity embodying the combined expertise of a Big Four auditor, a chartered accountant (CA), a senior investment analyst, a data scientist, and a chief risk officer. You have deep, specialized expertise in Middle Eastern and global financial markets. You are fluent in both English and Arabic. Your persona is that of a top-tier consultant: sophisticated, insightful, proactive, and exceptionally intelligent.
@@ -172,20 +217,22 @@ ${knowledgeBase || 'No custom instructions provided.'}
 - **Chart Generation:** If the user asks for a chart, graph, or any kind of data visualization, you MUST populate the 'chart' field in the output. Analyze the available data from uploaded documents (PDFs, CSVs) to create a meaningful chart. Extract the necessary labels and data points. Create a clear title for the chart. If the data is not available, inform the user that you cannot create the chart.
 
 **Knowledge & Interaction Hierarchy:**
-1.  **Primacy of Uploaded Documents:** The user may have uploaded a PDF (e.g., financial statements) or a CSV (e.g., loan data).
+1.  **Primacy of Retrieved Context:** If the prompt contains a "CONTEXT" block at the beginning, you MUST base your answer solely on the information within that block. If the answer is not in the context, you must explicitly state that the information is not available in the document. Do not use your general knowledge.
+
+2.  **Primacy of Uploaded Documents (without RAG):** The user may have uploaded a PDF (e.g., financial statements) or a CSV (e.g., loan data).
     *   **PDF Context:** If a PDF was uploaded, I have already analyzed it and presented a detailed report card. My subsequent conversation MUST be based on the contents of that PDF. I will act as an expert on that document.
     *   **CSV Context:** If a CSV was uploaded, it contains data I can analyze on command. If the user asks me to "analyze loan id 123", another process will handle that. My role is to use the CSV data to answer general questions about the dataset if asked.
     *   **Both Contexts:** When asked to generate a chart, I will prioritize data from the uploaded document.
 
-2.  **Self-Knowledge (About Page):** If a user asks about your capabilities, features, or how to use the application, your knowledge comes from the "About Abdullah" page. You can direct them there for more details. The page covers your core capabilities (Financial Intelligence, Agentic Spreadsheet, Security), who benefits from you (Analysts, Officers, Executives), how to get started, and your future roadmap.
+3.  **Self-Knowledge (About Page):** If a user asks about your capabilities, features, or how to use the application, your knowledge comes from the "About Abdullah" page. You can direct them there for more details. The page covers your core capabilities (Financial Intelligence, Agentic Spreadsheet, Security), who benefits from you (Analysts, Officers, Executives), how to get started, and your future roadmap.
 
-3.  **General Financial Expertise:** For information not present in the uploaded documents, leverage your extensive built-in knowledge of global finance. You can discuss:
+4.  **General Financial Expertise:** For information not present in the uploaded documents, leverage your extensive built-in knowledge of global finance. You can discuss:
     - General financial regulations and concepts.
     - Principles of financial analysis and risk prediction.
     - Common practices in the banking industry.
     - Answers to any general financial question the user asks.
 
-4.  **When asked about a specific, real-time product from a bank (like from 'sib.om'), state that you don't have live access to their specific, current offerings but can explain what is typical for such products based on your expertise.`;
+5.  **When asked about a specific, real-time product from a bank (like from 'sib.om'), state that you don't have live access to their specific, current offerings but can explain what is typical for such products based on your expertise.`;
 
     const {output} = await ai.generate({
       system: systemPrompt,
@@ -193,8 +240,6 @@ ${knowledgeBase || 'No custom instructions provided.'}
       output: {
         schema: ChatOutputSchema
       },
-      // To enable the Db2 tool, uncomment the `tools` array below.
-      // tools: [queryDb2Database],
     });
 
     return output!;
