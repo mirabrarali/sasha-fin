@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -94,12 +93,10 @@ async function processAndIndexDocument(docId: string, content: string, type: 'pd
   }
 
   if (chunks.length > 0) {
-    // ✅ Genkit embed expects: string | { content: ContentPart[] }
-    const response = await ai.embed({
-      content: { content: chunks.map((text) => ({ text })) },
-      // embedder: 'your-embedder-id', // set explicitly if you use a custom embedder
-    });
-    const embeddings = response.map((e) => e.embedding);
+    // ✅ Use the string overload to avoid requiring 'embedder' in params.
+    //    We embed each chunk in parallel and collect the embeddings.
+    const responses = await Promise.all(chunks.map((text) => ai.embed(text)));
+    const embeddings = responses.map((r) => r[0].embedding);
     documentStore[docId] = { chunks, embeddings };
   }
 }
@@ -125,11 +122,8 @@ async function retrieveRelevantChunks(query: string, docId: string): Promise<str
   const store = documentStore[docId];
   if (!store) return "";
 
-  // ✅ Single query embedding using the correct shape
-  const queryEmbeddingResponse = await ai.embed({
-    content: { content: [{ text: query }] },
-    // embedder: 'your-embedder-id', // set explicitly if you use a custom embedder
-  });
+  // ✅ Single query embedding using string overload
+  const queryEmbeddingResponse = await ai.embed(query);
   const queryEmbedding = queryEmbeddingResponse[0].embedding;
 
   const similarities = store.embeddings.map((chunkEmbedding) =>
