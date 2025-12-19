@@ -10,7 +10,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {MessageData, z} from 'genkit';
+import {EmbedRequest, MessageData, z} from 'genkit';
 import { getKnowledge } from '@/actions/knowledge-base-actions';
 
 const MessageSchema = z.object({
@@ -94,9 +94,8 @@ async function processAndIndexDocument(docId: string, content: string, type: 'pd
   }
 
   if (chunks.length > 0) {
-    const embeddingResponse = await ai.embed({
-      content: chunks.map(c => ({text: c})),
-    });
+    const requests: EmbedRequest[] = chunks.map(c => ({ content: c }));
+    const embeddingResponse = await ai.embed(requests);
     const embeddings = embeddingResponse.map(e => e.embedding);
     documentStore[docId] = { chunks, embeddings };
   }
