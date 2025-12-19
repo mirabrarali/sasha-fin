@@ -94,12 +94,12 @@ async function processAndIndexDocument(docId: string, content: string, type: 'pd
   }
 
   if (chunks.length > 0) {
-    // The user correctly pointed out this was the fix.
-    // It requires the 'embedder' and the 'content' to be an array of objects.
+    // Genkit expects content: Array<{ text: string }>
     const response = await ai.embed({
-      content: chunks,
+      content: chunks.map((text) => ({ text })),
+      // embedder: 'your-embedder-id', // leave as-is or set explicitly if configured
     });
-    const embeddings = response.map(e => e.embedding);
+    const embeddings = response.map((e) => e.embedding);
     documentStore[docId] = { chunks, embeddings };
   }
 }
@@ -125,7 +125,12 @@ async function retrieveRelevantChunks(query: string, docId: string): Promise<str
     const store = documentStore[docId];
     if (!store) return "";
 
-    const queryEmbeddingResponse = await ai.embed({ content: query });
+    // Pass content in the correct shape
+    const queryEmbeddingResponse = await ai.embed({
+      content: [{ text: query }],
+      // embedder: 'your-embedder-id', // leave or set explicitly if configured
+    });
+
     const queryEmbedding = queryEmbeddingResponse[0].embedding;
     
     const similarities = store.embeddings.map(chunkEmbedding => 
