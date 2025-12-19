@@ -94,13 +94,12 @@ async function processAndIndexDocument(docId: string, content: string, type: 'pd
   }
 
   if (chunks.length > 0) {
-    const embeddings: number[][] = [];
-    for (const chunk of chunks) {
-      const response = await ai.embed({
-        content: chunk,
-      });
-      embeddings.push(response[0].embedding);
-    }
+    // The user correctly pointed out this was the fix.
+    // It requires the 'embedder' and the 'content' to be an array of objects.
+    const response = await ai.embed({
+      content: chunks,
+    });
+    const embeddings = response.map(e => e.embedding);
     documentStore[docId] = { chunks, embeddings };
   }
 }
@@ -254,5 +253,3 @@ ${knowledgeBase || 'No custom instructions provided.'}
     return output!;
   }
 );
-
-    
