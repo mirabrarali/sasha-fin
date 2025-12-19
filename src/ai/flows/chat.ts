@@ -9,8 +9,8 @@
  * - ChatOutput - The return type for the chat function.
  */
 
-import {ai} from '@/ai/genkit';
-import { MessageData, z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { MessageData, z } from 'genkit';
 import { getKnowledge } from '@/actions/knowledge-base-actions';
 
 const MessageSchema = z.object({
@@ -42,16 +42,16 @@ const ChatInputSchema = z.object({
 export type ChatInput = z.infer<typeof ChatInputSchema>;
 
 const ChartDataSchema = z.object({
-    labels: z.array(z.string()).describe('The labels for the chart axes or segments.'),
-    datasets: z.array(z.object({
-        label: z.string().describe('The label for the dataset.'),
-        data: z.array(z.number()).describe('The numerical data for the dataset.'),
-    })).describe('The datasets to be plotted.'),
+  labels: z.array(z.string()).describe('The labels for the chart axes or segments.'),
+  datasets: z.array(z.object({
+    label: z.string().describe('The label for the dataset.'),
+    data: z.array(z.number()).describe('The numerical data for the dataset.'),
+  })).describe('The datasets to be plotted.'),
 });
 
 const ChatOutputSchema = z.object({
   content: z.string().describe("Abdullah's response to the user."),
-   chart: z.object({
+  chart: z.object({
     type: z.enum(['bar', 'pie']).describe("The type of chart to generate."),
     title: z.string().describe("The title of the chart."),
     data: ChartDataSchema.describe("The data for the chart, formatted for a chart library like Recharts."),
@@ -94,10 +94,10 @@ async function processAndIndexDocument(docId: string, content: string, type: 'pd
   }
 
   if (chunks.length > 0) {
-    // Genkit expects content: Array<{ text: string }>
+    // ✅ Genkit embed expects: string | { content: ContentPart[] }
     const response = await ai.embed({
-      content: chunks.map((text) => ({ text })),
-      // embedder: 'your-embedder-id', // leave as-is or set explicitly if configured
+      content: { content: chunks.map((text) => ({ text })) },
+      // embedder: 'your-embedder-id', // set explicitly if you use a custom embedder
     });
     const embeddings = response.map((e) => e.embedding);
     documentStore[docId] = { chunks, embeddings };
@@ -105,44 +105,43 @@ async function processAndIndexDocument(docId: string, content: string, type: 'pd
 }
 
 function cosineSimilarity(vecA: number[], vecB: number[]): number {
-    let dotProduct = 0;
-    let normA = 0;
-    let normB = 0;
-    const len = Math.min(vecA.length, vecB.length); // guard against length mismatch
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  const len = Math.min(vecA.length, vecB.length); // guard against length mismatch
 
-    for (let i = 0; i < len; i++) {
-        dotProduct += vecA[i] * vecB[i];
-        normA += vecA[i] * vecA[i];
-        normB += vecB[i] * vecB[i];
-    }
+  for (let i = 0; i < len; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
+  }
 
-    const denom = Math.sqrt(normA) * Math.sqrt(normB);
-    if (denom === 0) return 0; // avoid divide-by-zero
-    return dotProduct / denom;
+  const denom = Math.sqrt(normA) * Math.sqrt(normB);
+  if (denom === 0) return 0; // avoid divide-by-zero
+  return dotProduct / denom;
 }
 
 async function retrieveRelevantChunks(query: string, docId: string): Promise<string> {
-    const store = documentStore[docId];
-    if (!store) return "";
+  const store = documentStore[docId];
+  if (!store) return "";
 
-    // Pass content in the correct shape
-    const queryEmbeddingResponse = await ai.embed({
-      content: [{ text: query }],
-      // embedder: 'your-embedder-id', // leave or set explicitly if configured
-    });
+  // ✅ Single query embedding using the correct shape
+  const queryEmbeddingResponse = await ai.embed({
+    content: { content: [{ text: query }] },
+    // embedder: 'your-embedder-id', // set explicitly if you use a custom embedder
+  });
+  const queryEmbedding = queryEmbeddingResponse[0].embedding;
 
-    const queryEmbedding = queryEmbeddingResponse[0].embedding;
-    
-    const similarities = store.embeddings.map(chunkEmbedding => 
-        cosineSimilarity(queryEmbedding, chunkEmbedding)
-    );
-    
-    const sortedChunks = store.chunks
-        .map((chunk, index) => ({ chunk, similarity: similarities[index] }))
-        .sort((a, b) => b.similarity - a.similarity);
-    
-    // Return top 3 most relevant chunks
-    return sortedChunks.slice(0, 3).map(c => c.chunk).join('\n\n---\n\n');
+  const similarities = store.embeddings.map((chunkEmbedding) =>
+    cosineSimilarity(queryEmbedding, chunkEmbedding)
+  );
+
+  const sortedChunks = store.chunks
+    .map((chunk, index) => ({ chunk, similarity: similarities[index] }))
+    .sort((a, b) => b.similarity - a.similarity);
+
+  // Return top 3 most relevant chunks
+  return sortedChunks.slice(0, 3).map((c) => c.chunk).join('\n\n---\n\n');
 }
 
 const chatFlow = ai.defineFlow(
@@ -162,7 +161,7 @@ const chatFlow = ai.defineFlow(
           "I'm here to help. How can I assist with your banking needs?",
       };
     }
-    
+
     const lastUserMessage = input.history[input.history.length - 1]?.content || "";
     let documentContext = "";
 
@@ -181,32 +180,32 @@ const chatFlow = ai.defineFlow(
       await processAndIndexDocument(docId, input.csvData, 'csv');
       documentContext = await retrieveRelevantChunks(lastUserMessage, docId);
     }
-    
+
     const messages: MessageData[] = input.history
       .slice(firstUserMessageIndex)
       .map((message) => ({
         role: message.role === 'assistant' ? 'model' : 'user',
-        content: [{text: message.content}],
+        content: [{ text: message.content }],
       }));
-    
+
     // Add retrieved context to the start of the message history for the AI
     if (documentContext) {
-        messages.unshift({
-            role: 'user', // Posing as user instruction/context
-            content: [{
-                text: `Use ONLY the following information to answer the user's question. If the information is not in the context, say that you cannot find the answer in the provided document.\n\nCONTEXT:\n---\n${documentContext}\n---`
-            }]
-        });
+      messages.unshift({
+        role: 'user', // Posing as user instruction/context
+        content: [{
+          text: `Use ONLY the following information to answer the user's question. If the information is not in the context, say that you cannot find the answer in the provided document.\n\nCONTEXT:\n---\n${documentContext}\n---`
+        }]
+      });
     } else if (input.pdfDataUri) { // Fallback for when RAG might not find chunks, but a PDF is present
-        messages.unshift({
-          role: 'user',
-          content: [
-            {
-              text: 'The user has ALREADY uploaded the following PDF. I have ALREADY analyzed it and provided a report card. For the rest of the conversation, this document is the primary context. Answer questions based on its content, and if asked to create a chart or graph, use the data from this document.',
-            },
-            {media: {url: input.pdfDataUri}},
-          ],
-        });
+      messages.unshift({
+        role: 'user',
+        content: [
+          {
+            text: 'The user has ALREADY uploaded the following PDF. I have ALREADY analyzed it and provided a report card. For the rest of the conversation, this document is the primary context. Answer questions based on its content, and if asked to create a chart or graph, use the data from this document.',
+          },
+          { media: { url: input.pdfDataUri } },
+        ],
+      });
     } else if (input.csvData) { // Fallback for CSV
       messages.unshift({
         role: 'user',
@@ -217,7 +216,6 @@ const chatFlow = ai.defineFlow(
         ],
       });
     }
-
 
     const knowledgeBase = await getKnowledge();
     const systemPrompt = `You are Abdullah, a premier AI financial entity embodying the combined expertise of a Big Four auditor, a chartered accountant (CA), a senior investment analyst, a data scientist, and a chief risk officer. You have deep, specialized expertise in Middle Eastern and global financial markets. You are fluent in both English and Arabic. Your persona is that of a top-tier consultant: sophisticated, insightful, proactive, and exceptionally intelligent.
@@ -252,7 +250,7 @@ ${knowledgeBase || 'No custom instructions provided.'}
 
 5.  **When asked about a specific, real-time product from a bank (like from 'sib.om'), state that you don't have live access to their specific, current offerings but can explain what is typical for such products based on your expertise.`;
 
-    const {output} = await ai.generate({
+    const { output } = await ai.generate({
       system: systemPrompt,
       messages: messages,
       output: {
