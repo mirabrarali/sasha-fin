@@ -15,7 +15,6 @@ import { MainNav } from '@/components/main-nav';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { cn } from '@/lib/utils';
-import { DevToolsBlocker } from '@/components/dev-tools-blocker';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -107,7 +106,6 @@ export default function RootLayout({
             </SidebarInset>
           </SidebarProvider>
           <Toaster />
-          {process.env.NODE_ENV === 'production' && <DevToolsBlocker />}
         </LanguageProvider>
         <Analytics />
         <SpeedInsights />
