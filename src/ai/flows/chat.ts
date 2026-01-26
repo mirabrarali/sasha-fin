@@ -99,7 +99,7 @@ const chatFlow = ai.defineFlow(
         role: 'user',
         content: [
           {
-            text: `The user has access to the following CSV data. Use this as context for our conversation. The user can ask me to analyze a specific loan by its ID, or ask general questions about the data. I can also be asked to generate charts from this data.\n\n\`\`\`csv\n${loanDataCsv}\n\`\`\``,
+            text: `The user has access to the following customer account CSV data. Use this as context for our conversation. The user can ask me to analyze a specific account by its ID (using the "analyze loan id" command), or ask general questions about the data. I can also be asked to generate charts from this data.\n\n\`\`\`csv\n${loanDataCsv}\n\`\`\``,
           },
         ],
       });
