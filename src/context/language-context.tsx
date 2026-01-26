@@ -153,10 +153,6 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     daDragDropSupported: "Supported: CSV, XLSX, PDF",
     daDragDropSupportedPdf: "Supported: PDF",
     daAnalysisFailedDesc: "Could not generate dashboard. Check the file format or try a different file.",
-    
-    // PIN Lock
-    pinTitle: 'PIN Required',
-    pinDescription: 'Please enter your PIN to access the chat.',
   },
   ar: {
     pageTitle: 'الشات بوت المصرفي',
@@ -298,10 +294,6 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     daDragDropSupported: "المدعومة: CSV ، XLSX ، PDF",
     daDragDropSupportedPdf: "المدعومة: PDF",
     daAnalysisFailedDesc: "تعذر إنشاء لوحة المعلومات. تحقق من تنسيق الملف أو جرب ملفًا مختلفًا.",
-    
-    // PIN Lock
-    pinTitle: 'الرجاء إدخال الرقم السري',
-    pinDescription: 'الرجاء إدخال الرقم السري للوصول إلى الدردشة.',
   },
 };
 

@@ -4,7 +4,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { CornerDownLeft, FileText, XCircle, Loader2, RefreshCw, UploadCloud, KeyRound } from 'lucide-react';
+import { CornerDownLeft, FileText, XCircle, Loader2, RefreshCw, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -72,53 +72,6 @@ type ReportToDownload = NonNullable<Message['analysisReport'] | Message['financi
 type ReportType = 'loan' | 'financial';
 
 
-const PinInput = ({ onPinEntered }: { onPinEntered: (isCorrect: boolean) => void }) => {
-    const { t } = useLanguage();
-    const [pin, setPin] = useState('');
-    const [error, setError] = useState(false);
-    const correctPin = '2661';
-
-    const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newPin = e.target.value;
-        if (/^\d{0,4}$/.test(newPin)) {
-            setPin(newPin);
-            setError(false);
-            if (newPin.length === 4) {
-                if (newPin === correctPin) {
-                    onPinEntered(true);
-                } else {
-                    setError(true);
-                    setTimeout(() => setPin(''), 500);
-                }
-            }
-        }
-    };
-
-    return (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/90 backdrop-blur-sm">
-            <div className="flex flex-col items-center gap-4 text-center">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full border bg-card">
-                    <KeyRound className="h-8 w-8 text-primary" />
-                </div>
-                <h2 className="text-2xl font-bold tracking-tight">{t('pinTitle')}</h2>
-                <p className="max-w-xs text-muted-foreground">{t('pinDescription')}</p>
-                <div className={cn("flex gap-2", error && 'animate-in fade-in-0 shake-sm')}>
-                    <Input 
-                        type="password"
-                        value={pin}
-                        onChange={handlePinChange}
-                        maxLength={4}
-                        className="h-14 w-32 text-center text-2xl font-mono tracking-widest"
-                        placeholder="----"
-                        autoFocus
-                    />
-                </div>
-            </div>
-        </div>
-    );
-};
-
-
 export default function ChatPageClient() {
   const { t, language, dir } = useLanguage();
   const [hasMounted, setHasMounted] = useState(false);
@@ -126,7 +79,6 @@ export default function ChatPageClient() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isUnlocked, setIsUnlocked] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [pdfData, setPdfData] = useState<string | null>(null);
   const [pdfFileName, setPdfFileName] = useState<string | null>(null);
@@ -494,7 +446,6 @@ export default function ChatPageClient() {
 
     setInput('');
     setIsLoading(false);
-    setIsUnlocked(false);
 
     toast({
         title: t('newSessionTitle'),
@@ -635,9 +586,8 @@ export default function ChatPageClient() {
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
               >
-                {!isUnlocked && <PinInput onPinEntered={setIsUnlocked} />}
 
-                <div className={cn("h-full flex flex-col animate-in fade-in-50 duration-500", !isUnlocked && "pointer-events-none blur-sm")}>
+                <div className="h-full flex flex-col animate-in fade-in-50 duration-500">
                   <main id="chat-main" className="flex-1 overflow-y-auto">
                       <MessageList 
                       messages={messages} 
