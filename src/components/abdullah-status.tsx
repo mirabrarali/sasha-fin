@@ -4,7 +4,7 @@
 import { useLanguage } from '@/context/language-context';
 import { useState, useEffect } from 'react';
 
-export function AbdullahStatus() {
+export function ChatbotStatus() {
     const { t } = useLanguage();
     const [hasMounted, setHasMounted] = useState(false);
 
@@ -33,7 +33,7 @@ export function AbdullahStatus() {
                 </span>
             </div>
             <p className="text-xs text-muted-foreground font-mono">
-                {t('abdullahStatusOnline')}
+                {t('chatbotStatusOnline')}
             </p>
         </div>
     );

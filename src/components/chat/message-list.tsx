@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import NextImage from 'next/image';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { AbdullahAvatar } from '@/components/abdullah-avatar';
+import { ChatbotAvatar } from '@/components/abdullah-avatar';
 import { User, Download, Loader2, BarChart, PieChart } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -112,7 +112,7 @@ function ChatMessage({
         'justify-end': !isAssistant,
       })}
     >
-      {isAssistant && <AbdullahAvatar className="w-8 h-8 shrink-0" />}
+      {isAssistant && <ChatbotAvatar className="w-8 h-8 shrink-0" />}
       <div className="max-w-[90%] sm:max-w-[80%] md:max-w-[75%] space-y-2">
         {message.content && (
           <div
@@ -236,7 +236,7 @@ function ChatMessage({
 function TypingIndicator() {
   return (
     <div className="flex items-start gap-4 animate-in fade-in">
-      <AbdullahAvatar className="w-8 h-8 shrink-0" />
+      <ChatbotAvatar className="w-8 h-8 shrink-0" />
       <div className="bg-primary text-primary-foreground rounded-lg p-3 shadow-sm flex items-center space-x-1">
         <span className="w-2 h-2 bg-primary-foreground/50 rounded-full animate-pulse delay-0 duration-1000"></span>
         <span className="w-2 h-2 bg-primary-foreground/50 rounded-full animate-pulse delay-200 duration-1000"></span>

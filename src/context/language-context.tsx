@@ -14,9 +14,9 @@ interface LanguageContextType {
 
 const translations: { [key in Language]: { [key: string]: string } } = {
   en: {
-    pageTitle: 'Abdullah Banking',
-    initialMessage: "Hello! I'm Abdullah, your financial advisor. How can I help you today?",
-    placeholder: "Message Abdullah...",
+    pageTitle: 'Banking Chatbot',
+    initialMessage: "Hello! I'm your financial assistant. How can I help you today?",
+    placeholder: "Message the Banking Chatbot...",
     uploadCsvTooltip: "Upload Loan CSV/XLSX",
     uploadPdfTooltip: "Upload Financial PDF",
     sendSr: "Send",
@@ -32,7 +32,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     pdfLoadedForChat: "I've loaded {{fileName}}. Feel free to ask me any questions about it.",
     analyzingPdfMessage: "Analyzing financial statement: {{fileName}}...",
     analysisFailedTitle: "Analysis Failed",
-    analysisFailedDesc: "Abdullah could not analyze the document. Please ensure it's a valid financial statement and try again.",
+    analysisFailedDesc: "The chatbot could not analyze the document. Please ensure it's a valid financial statement and try again.",
     unableToAnalyzeMessage: 'Sorry, I was unable to analyze that document.',
     loanAnalysisHeader: "Here is the analysis for Loan ID **{{loanId}}**:",
     financialAnalysisHeader: "Here is the analysis of the financial statement:",
@@ -44,7 +44,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     documentLoadedTitle: 'Document Loaded',
     documentLoadedDesc: "Continuing session with {{fileName}}.",
     genericErrorTitle: 'Oh no! Something went wrong.',
-    genericErrorDesc: 'Failed to get a response from Abdullah. Please try again.',
+    genericErrorDesc: 'Failed to get a response from the chatbot. Please try again.',
     loanAnalysisReportTitle: "Loan Analysis Report",
     financialAnalysisReportTitle: "Financial Statement Analysis",
     summary: "Summary",
@@ -73,7 +73,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     
     devToolsTitle: "Access Denied",
     devToolsDescription: "For your security and the protection of our proprietary systems, access to developer tools is restricted on this application.",
-    devToolsMessage: "Welcome to Abdullah Banking. For security reasons, developer features are disabled. If you need assistance, please contact support.",
+    devToolsMessage: "Welcome to Banking Chatbot. For security reasons, developer features are disabled. If you need assistance, please contact support.",
 
     newSessionButton: "New Session",
     newSessionTitle: "New Session Started",
@@ -83,8 +83,8 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     newSessionConfirmDescChat: "This will clear your entire chat history and remove any uploaded files. This action cannot be undone.",
     newSessionConfirmButton: "Start New Session",
 
-    // Abdullah Status
-    abdullahStatusOnline: 'Online',
+    // Chatbot Status
+    chatbotStatusOnline: 'Online',
     
     // Nav
     chatTitle: 'Chat',
@@ -92,37 +92,37 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     knowledgeBaseTitle: 'Knowledge Base',
     
     // Enterprise Page (New About Page)
-    enterprisePageTitle: 'Abdullah for Enterprise',
+    enterprisePageTitle: 'Banking Chatbot for Enterprise',
     enterpriseHeader: "The Generative AI Platform for Modern Finance",
-    enterpriseSubHeader: "Abdullah is a state-of-the-art financial AI, engineered for the rigorous demands of banking, investment firms, and large-scale enterprises in the Middle East and beyond. Move beyond simple chatbots to a fully-agentic system that delivers unparalleled analytical power, security, and scalability.",
+    enterpriseSubHeader: "A state-of-the-art financial AI, engineered for the rigorous demands of banking, investment firms, and large-scale enterprises in the Middle East and beyond. Move beyond simple chatbots to a fully-agentic system that delivers unparalleled analytical power, security, and scalability.",
     enterpriseCorePitchTitle: "From Billions of Datapoints to Actionable Intelligence",
-    enterpriseCorePitchP1: "Abdullah is architected to process and synthesize vast datasets—from terabytes of transactional records to thousands of complex financial documents—in near real-time. Our custom AI models, trained specifically for financial analysis, identify critical patterns, predict risk, and generate institutional-grade insights at a scale and speed that is impossible for human teams alone.",
+    enterpriseCorePitchP1: "The platform is architected to process and synthesize vast datasets—from terabytes of transactional records to thousands of complex financial documents—in near real-time. Our custom AI models, trained specifically for financial analysis, identify critical patterns, predict risk, and generate institutional-grade insights at a scale and speed that is impossible for human teams alone.",
     enterpriseCorePitchP2: "Leverage this power to accelerate due diligence, enhance credit risk modeling, and provide your teams with a strategic co-pilot for high-stakes decision-making.",
     enterpriseCorePitchP3: "Our system is built to handle the complexities of regional financial data, offering unparalleled accuracy and relevance for the GCC markets.",
     enterpriseCapabilitiesTitle: "A Suite of Powerful, Integrated Capabilities",
     capabilityAnalysisTitle: "Deep Financial Analysis",
-    capabilityAnalysisDesc: "Perform forensic analysis on financial statements (P&L, Balance Sheet, Cash Flow) to evaluate financial health, creditworthiness, and identify red flags. Abdullah can process years of financial data in seconds to provide a comprehensive overview.",
+    capabilityAnalysisDesc: "Perform forensic analysis on financial statements (P&L, Balance Sheet, Cash Flow) to evaluate financial health, creditworthiness, and identify red flags. The chatbot can process years of financial data in seconds to provide a comprehensive overview.",
     capabilityDocIntelTitle: "Intelligent Document Processing",
     capabilityDocIntelDesc: "Instantly extract, analyze, and query data from unstructured documents like PDFs, annual reports, and legal contracts using natural language. Ask complex questions and get precise answers, complete with citations.",
     capabilityRiskTitle: "Predictive Risk & Trend Modeling",
     capabilityRiskDesc: "Utilize AI-driven models to forecast financial trajectories, predict credit scores with high accuracy, and identify emerging market trends from your proprietary data, with specific tuning for Middle Eastern markets.",
     capabilityDataTitle: "Agentic Data Analysis",
-    capabilityDataDesc: "Go beyond static dashboards. Command Abdullah to perform complex data operations, create ad-hoc visualizations, and answer deep, multi-dimensional questions about your data in a conversational interface.",
+    capabilityDataDesc: "Go beyond static dashboards. Command the chatbot to perform complex data operations, create ad-hoc visualizations, and answer deep, multi-dimensional questions about your data in a conversational interface.",
     capabilityBilingualTitle: "Bilingual & Region-Aware",
     capabilityBilingualDesc: "Fully fluent in both Arabic and English, with a nuanced understanding of GCC financial regulations, cultural context, and market-specific terminology, ensuring accurate and relevant analysis.",
     capabilityKnowledgeTitle: "Customizable Knowledge Base",
-    capabilityKnowledgeDesc: "Securely augment Abdullah's core knowledge with your institution's specific rules, internal policies, and proprietary data for analysis that is perfectly tailored to your operational framework.",
+    capabilityKnowledgeDesc: "Securely augment the chatbot's core knowledge with your institution's specific rules, internal policies, and proprietary data for analysis that is perfectly tailored to your operational framework.",
 
     enterpriseDeploymentTitle: "Enterprise-Grade Deployment & Security",
     deploymentSecurityTitle: "Uncompromising Security",
-    deploymentSecurityDesc: "Your data is your most valuable asset. Abdullah is built on a private-first architecture with end-to-end encryption. Your proprietary data is never used for external model training, guaranteed.",
+    deploymentSecurityDesc: "Your data is your most valuable asset. The platform is built on a private-first architecture with end-to-end encryption. Your proprietary data is never used for external model training, guaranteed.",
     deploymentOnPremTitle: "On-Premise & Private Cloud",
-    deploymentOnPremDesc: "Maintain full control over your data and compute. Abdullah can be deployed on your own infrastructure or private cloud, ensuring compliance with the strictest data residency and security policies.",
+    deploymentOnPremDesc: "Maintain full control over your data and compute. The platform can be deployed on your own infrastructure or private cloud, ensuring compliance with the strictest data residency and security policies.",
     deploymentDataTitle: "Flexible Licensing & Integration",
     deploymentDataDesc: "We offer tailored licensing models, from per-seat to full enterprise, to fit your organization's needs. Robust API access allows for seamless integration into your existing CRM, ERP, and internal banking platforms.",
     
     enterpriseCtaTitle: "Ready to Transform Your Financial Intelligence?",
-    enterpriseCtaDesc: "Discover how Abdullah can empower your organization to make faster, smarter decisions with unparalleled data-driven insights. Schedule a private demo with our enterprise team to see the platform in action.",
+    enterpriseCtaDesc: "Discover how our platform can empower your organization to make faster, smarter decisions with unparalleled data-driven insights. Schedule a private demo with our enterprise team to see the platform in action.",
     enterpriseCtaButton: "Request a Demo",
 
     // New Sections
@@ -134,13 +134,13 @@ const translations: { [key in Language]: { [key: string]: string } } = {
 
     highSkillsTitle: "High-Skill Agentic Functions",
     skillAgenticTitle: "Agentic Workflow Automation",
-    skillAgenticDesc: "Abdullah can execute multi-step financial processes autonomously. From running month-end reconciliations to generating board-ready reports, he acts as a tireless digital analyst.",
+    skillAgenticDesc: "The chatbot can execute multi-step financial processes autonomously. From running month-end reconciliations to generating board-ready reports, it acts as a tireless digital analyst.",
     skillAnomalyTitle: "Forensic Anomaly Detection",
-    skillAnomalyDesc: "Leveraging advanced pattern recognition, Abdullah can sift through millions of transactions to flag potentially fraudulent activities, compliance breaches, or data inconsistencies that would evade human review.",
+    skillAnomalyDesc: "Leveraging advanced pattern recognition, the chatbot can sift through millions of transactions to flag potentially fraudulent activities, compliance breaches, or data inconsistencies that would evade human review.",
     skillScenarioTitle: "Complex Scenario Modeling",
-    skillScenarioDesc: "Ask Abdullah to model complex what-if scenarios, such as the impact of interest rate changes on a loan portfolio or market volatility on investment performance, and receive data-backed projections in seconds.",
+    skillScenarioDesc: "Ask the chatbot to model complex what-if scenarios, such as the impact of interest rate changes on a loan portfolio or market volatility on investment performance, and receive data-backed projections in seconds.",
     skillIntegrationTitle: "Seamless Systems Integration",
-    skillIntegrationDesc: "Abdullah is not a silo. He can be integrated with your core banking systems, data warehouses, and market data feeds to pull and push information, enriching his analysis with real-time context.",
+    skillIntegrationDesc: "The chatbot is not a silo. It can be integrated with your core banking systems, data warehouses, and market data feeds to pull and push information, enriching its analysis with real-time context.",
 
     // Data Analytics
     dataAnalyticsTitle: 'Data Analytics',
@@ -148,7 +148,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     daUploadPromptDesc: "Upload a CSV, XLSX, or PDF file to generate a dashboard with insights and visualizations.",
     daUploadButton: "Upload Data File",
     daGeneratingDashboardTitle: 'Generating Your Dashboard...',
-    daGeneratingDashboardDesc: 'Abdullah is analyzing your data to find key insights.',
+    daGeneratingDashboardDesc: 'The chatbot is analyzing your data to find key insights.',
     daSummaryTitle: "AI Summary",
     daKeyInsightsTitle: "Key Insights",
     daDownloadPdfButton: "Download Report",
@@ -166,9 +166,9 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     pinDescription: 'Please enter your PIN to access the chat.',
   },
   ar: {
-    pageTitle: 'عبدالله المصرفية',
-    initialMessage: "مرحباً! أنا عبدالله، مستشارك المالي. كيف يمكنني مساعدتك اليوم؟",
-    placeholder: "راسل عبدالله...",
+    pageTitle: 'الشات بوت المصرفي',
+    initialMessage: "مرحباً! أنا مساعدك المالي. كيف يمكنني مساعدتك اليوم؟",
+    placeholder: "راسل الشات بوت المصرفي...",
     uploadCsvTooltip: "تحميل ملف CSV/XLSX للقروض",
     uploadPdfTooltip: "تحميل ملف PDF مالي",
     sendSr: "إرسال",
@@ -184,7 +184,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     pdfLoadedForChat: "لقد قمت بتحميل {{fileName}}. لا تتردد في طرح أي أسئلة حوله.",
     analyzingPdfMessage: "جاري تحليل البيان المالي: {{fileName}}...",
     analysisFailedTitle: "فشل التحليل",
-    analysisFailedDesc: "لم يتمكن عبدالله من تحليل المستند. يرجى التأكد من أنه بيان مالي صالح والمحاولة مرة أخرى.",
+    analysisFailedDesc: "لم يتمكن الشات بوت من تحليل المستند. يرجى التأكد من أنه بيان مالي صالح والمحاولة مرة أخرى.",
     unableToAnalyzeMessage: 'عذراً، لم أتمكن من تحليل ذلك المستند.',
     loanAnalysisHeader: "إليك تحليل معرف القرض **{{loanId}}**:",
     financialAnalysisHeader: "إليك تحليل البيان المالي:",
@@ -196,7 +196,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     documentLoadedTitle: 'تم تحميل المستند',
     documentLoadedDesc: "متابعة الجلسة مع {{fileName}}.",
     genericErrorTitle: 'عفوًا! حدث خطأ ما.',
-    genericErrorDesc: 'فشل الحصول على رد من عبدالله. يرجى المحاولة مرة أخرى.',
+    genericErrorDesc: 'فشل الحصول على رد من الشات بوت. يرجى المحاولة مرة أخرى.',
     loanAnalysisReportTitle: "تقرير تحليل القرض",
     financialAnalysisReportTitle: "تحليل البيان المالي",
     summary: "ملخص",
@@ -225,7 +225,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
 
     devToolsTitle: "الوصول مرفوض",
     devToolsDescription: "لأمانك وحماية أنظمتنا الخاصة، الوصول إلى أدوات المطورين مقيد في هذا التطبيق.",
-    devToolsMessage: "أهلاً بك في عبدالله المصرفية. لأسباب أمنية، ميزات المطورين معطلة. إذا كنت بحاجة إلى مساعدة، يرجى الاتصال بالدعم.",
+    devToolsMessage: "أهلاً بك في الشات بوت المصرفي. لأسباب أمنية، ميزات المطورين معطلة. إذا كنت بحاجة إلى مساعدة، يرجى الاتصال بالدعم.",
     
     newSessionButton: "جلسة جديدة",
     newSessionTitle: "بدأت جلسة جديدة",
@@ -235,8 +235,8 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     newSessionConfirmDescChat: "سيؤدي هذا إلى مسح سجل الدردشة بالكامل وإزالة أي ملفات تم تحميلها. لا يمكن التراجع عن هذا الإجراء.",
     newSessionConfirmButton: "بدء جلسة جديدة",
 
-    // Abdullah Status
-    abdullahStatusOnline: 'متصل',
+    // Chatbot Status
+    chatbotStatusOnline: 'متصل',
 
     // Nav
     chatTitle: 'الدردشة',
@@ -244,37 +244,37 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     knowledgeBaseTitle: 'قاعدة المعرفة',
     
     // Enterprise Page (New About Page)
-    enterprisePageTitle: 'عبدالله للمؤسسات',
+    enterprisePageTitle: 'الشات بوت المصرفي للمؤسسات',
     enterpriseHeader: "منصة الذكاء الاصطناعي التوليدي للمالية الحديثة",
-    enterpriseSubHeader: "عبدالله هو ذكاء اصطناعي مالي فائق الحداثة، مصمم للمتطلبات الصارمة للبنوك وشركات الاستثمار والمؤسسات الكبرى في الشرق الأوسط وخارجه. تجاوز روبوتات الدردشة البسيطة إلى نظام وكيلي بالكامل يقدم قوة تحليلية وأمانًا وقابلية للتوسع لا مثيل لها.",
+    enterpriseSubHeader: "ذكاء اصطناعي مالي فائق الحداثة، مصمم للمتطلبات الصارمة للبنوك وشركات الاستثمار والمؤسسات الكبرى في الشرق الأوسط وخارجه. تجاوز روبوتات الدردشة البسيطة إلى نظام وكيلي بالكامل يقدم قوة تحليلية وأمانًا وقابلية للتوسع لا مثيل لها.",
     enterpriseCorePitchTitle: "من مليارات نقاط البيانات إلى ذكاء قابل للتنفيذ",
-    enterpriseCorePitchP1: "تم تصميم عبدالله لمعالجة وتجميع مجموعات بيانات ضخمة - من تيرابايت من سجلات المعاملات إلى آلاف المستندات المالية المعقدة - في الوقت الفعلي تقريبًا. تحدد نماذج الذكاء الاصطناعي المخصصة لدينا، والتي تم تدريبها خصيصًا للتحليل المالي، الأنماط الحرجة وتتنبأ بالمخاطر وتولد رؤى على مستوى المؤسسات بحجم وسرعة يستحيل على الفرق البشرية وحدها تحقيقها.",
+    enterpriseCorePitchP1: "تم تصميم المنصة لمعالجة وتجميع مجموعات بيانات ضخمة - من تيرابايت من سجلات المعاملات إلى آلاف المستندات المالية المعقدة - في الوقت الفعلي تقريبًا. تحدد نماذج الذكاء الاصطناعي المخصصة لدينا، والتي تم تدريبها خصيصًا للتحليل المالي، الأنماط الحرجة وتتنبأ بالمخاطر وتولد رؤى على مستوى المؤسسات بحجم وسرعة يستحيل على الفرق البشرية وحدها تحقيقها.",
     enterpriseCorePitchP2: "استفد من هذه القوة لتسريع العناية الواجبة، وتعزيز نمذجة مخاطر الائتمان، وتزويد فرقك بمساعد استراتيجي لاتخاذ القرارات عالية المخاطر.",
     enterpriseCorePitchP3: "نظامنا مصمم للتعامل مع تعقيدات البيانات المالية الإقليمية، مما يوفر دقة وأهمية لا مثيل لها لأسواق دول مجلس التعاون الخليجي.",
     enterpriseCapabilitiesTitle: "مجموعة من القدرات القوية والمتكاملة",
     capabilityAnalysisTitle: "تحليل مالي عميق",
-    capabilityAnalysisDesc: "قم بإجراء تحليل جنائي للبيانات المالية (بيان الدخل، الميزانية العمومية، التدفقات النقدية) لتقييم الصحة المالية والجدارة الائتمانية وتحديد العلامات الحمراء. يمكن لعبدالله معالجة سنوات من البيانات المالية في ثوانٍ لتقديم نظرة عامة شاملة.",
+    capabilityAnalysisDesc: "قم بإجراء تحليل جنائي للبيانات المالية (بيان الدخل، الميزانية العمومية، التدفقات النقدية) لتقييم الصحة المالية والجدارة الائتمانية وتحديد العلامات الحمراء. يمكن للشات بوت معالجة سنوات من البيانات المالية في ثوانٍ لتقديم نظرة عامة شاملة.",
     capabilityDocIntelTitle: "معالجة ذكية للمستندات",
     capabilityDocIntelDesc: "استخرج وحلل واستعلم عن البيانات على الفور من المستندات غير المهيكلة مثل ملفات PDF والتقارير السنوية والعقود القانونية باستخدام اللغة الطبيعية. اطرح أسئلة معقدة واحصل على إجابات دقيقة مع الاستشهادات.",
     capabilityRiskTitle: "نمذجة المخاطر والاتجاهات التنبؤية",
     capabilityRiskDesc: "استخدم النماذج المدفوعة بالذكاء الاصطناعي للتنبؤ بالمسارات المالية، وتوقع درجات الائتمان بدقة عالية، وتحديد اتجاهات السوق الناشئة من بياناتك الخاصة، مع ضبط خاص لأسواق الشرق الأوسط.",
     capabilityDataTitle: "تحليل بيانات وكيلي",
-    capabilityDataDesc: "تجاوز لوحات المعلومات الثابتة. أصدر أوامر لعبدالله لإجراء عمليات بيانات معقدة، وإنشاء تصورات مخصصة، والإجابة على أسئلة عميقة متعددة الأبعاد حول بياناتك في واجهة محادثة.",
+    capabilityDataDesc: "تجاوز لوحات المعلومات الثابتة. أصدر أوامر للشات بوت لإجراء عمليات بيانات معقدة، وإنشاء تصورات مخصصة، والإجابة على أسئلة عميقة متعددة الأبعاد حول بياناتك في واجهة محادثة.",
     capabilityBilingualTitle: "ثنائي اللغة ومدرك للمنطقة",
     capabilityBilingualDesc: "يتقن اللغتين العربية والإنجليزية تمامًا، مع فهم دقيق للوائح المالية لدول مجلس التعاون الخليجي، والسياق الثقافي، والمصطلحات الخاصة بالسوق، مما يضمن تحليلًا دقيقًا وملائمًا.",
     capabilityKnowledgeTitle: "قاعدة معرفة قابلة للتخصيص",
-    capabilityKnowledgeDesc: "عزز بشكل آمن معرفة عبدالله الأساسية بالقواعد والسياسات الداخلية والبيانات الخاصة بمؤسستك لتحليل مصمم خصيصًا لإطار عملك التشغيلي.",
+    capabilityKnowledgeDesc: "عزز بشكل آمن معرفة الشات بوت الأساسية بالقواعد والسياسات الداخلية والبيانات الخاصة بمؤسستك لتحليل مصمم خصيصًا لإطار عملك التشغيلي.",
 
     enterpriseDeploymentTitle: "نشر وأمان على مستوى المؤسسات",
     deploymentSecurityTitle: "أمان لا هوادة فيه",
-    deploymentSecurityDesc: "بياناتك هي أثمن أصولك. تم بناء عبدالله على بنية خاصة أولاً مع تشفير من طرف إلى طرف. نضمن عدم استخدام بياناتك الخاصة أبدًا لتدريب النماذج الخارجية.",
+    deploymentSecurityDesc: "بياناتك هي أثمن أصولك. تم بناء المنصة على بنية خاصة أولاً مع تشفير من طرف إلى طرف. نضمن عدم استخدام بياناتك الخاصة أبدًا لتدريب النماذج الخارجية.",
     deploymentOnPremTitle: "في أماكن العمل والسحابة الخاصة",
-    deploymentOnPremDesc: "حافظ على السيطرة الكاملة على بياناتك وحوسبتك. يمكن نشر عبدالله على بنيتك التحتية الخاصة أو سحابتك الخاصة، مما يضمن الامتثال لأكثر سياسات إقامة البيانات وأمانها صرامة.",
+    deploymentOnPremDesc: "حافظ على السيطرة الكاملة على بياناتك وحوسبتك. يمكن نشر المنصة على بنيتك التحتية الخاصة أو سحابتك الخاصة، مما يضمن الامتثال لأكثر سياسات إقامة البيانات وأمانها صرامة.",
     deploymentDataTitle: "ترخيص وتكامل مرن",
     deploymentDataDesc: "نقدم نماذج ترخيص مخصصة، من الترخيص لكل مقعد إلى المؤسسة الكاملة، لتناسب احتياجات مؤسستك. يتيح الوصول القوي إلى واجهة برمجة التطبيقات التكامل السلس مع أنظمة CRM و ERP ومنصاتك المصرفية الداخلية الحالية.",
     
     enterpriseCtaTitle: "هل أنت مستعد لتحويل ذكائك المالي؟",
-    enterpriseCtaDesc: "اكتشف كيف يمكن لعبدالله تمكين مؤسستك من اتخاذ قرارات أسرع وأكثر ذكاءً برؤى لا مثيل لها تعتمد على البيانات. حدد موعدًا لعرض توضيحي خاص مع فريق المؤسسات لدينا لرؤية المنصة أثناء العمل.",
+    enterpriseCtaDesc: "اكتشف كيف يمكن لمنصتنا تمكين مؤسستك من اتخاذ قرارات أسرع وأكثر ذكاءً برؤى لا مثيل لها تعتمد على البيانات. حدد موعدًا لعرض توضيحي خاص مع فريق المؤسسات لدينا لرؤية المنصة أثناء العمل.",
     enterpriseCtaButton: "طلب عرض توضيحي",
     
     // New Sections
@@ -286,13 +286,13 @@ const translations: { [key in Language]: { [key: string]: string } } = {
 
     highSkillsTitle: "وظائف وكيلية عالية المهارة",
     skillAgenticTitle: "أتمتة سير العمل الوكيلية",
-    skillAgenticDesc: "يمكن لعبدالله تنفيذ عمليات مالية متعددة الخطوات بشكل مستقل. من إجراء تسويات نهاية الشهر إلى إنشاء تقارير جاهزة لمجلس الإدارة، يعمل كمحلل رقمي لا يكل.",
+    skillAgenticDesc: "يمكن للشات بوت تنفيذ عمليات مالية متعددة الخطوات بشكل مستقل. من إجراء تسويات نهاية الشهر إلى إنشاء تقارير جاهزة لمجلس الإدارة، يعمل كمحلل رقمي لا يكل.",
     skillAnomalyTitle: "كشف الشذوذ الجنائي",
-    skillAnomalyDesc: "باستخدام التعرف المتقدم على الأنماط، يمكن لعبدالله فحص ملايين المعاملات للإبلاغ عن الأنشطة الاحتيالية المحتملة أو انتهاكات الامتثال أو تناقضات البيانات التي قد تفلت من المراجعة البشرية.",
+    skillAnomalyDesc: "باستخدام التعرف المتقدم على الأنماط، يمكن للشات بوت فحص ملايين المعاملات للإبلاغ عن الأنشطة الاحتيالية المحتملة أو انتهاكات الامتثال أو تناقضات البيانات التي قد تفلت من المراجعة البشرية.",
     skillScenarioTitle: "نمذجة السيناريوهات المعقدة",
-    skillScenarioDesc: "اطلب من عبدالله نمذجة سيناريوهات 'ماذا لو' المعقدة، مثل تأثير تغييرات أسعار الفائدة على محفظة القروض أو تقلبات السوق على أداء الاستثمار، واحصل على توقعات مدعومة بالبيانات في ثوانٍ.",
+    skillScenarioDesc: "اطلب من الشات بوت نمذجة سيناريوهات 'ماذا لو' المعقدة، مثل تأثير تغييرات أسعار الفائدة على محفظة القروض أو تقلبات السوق على أداء الاستثمار، واحصل على توقعات مدعومة بالبيانات في ثوانٍ.",
     skillIntegrationTitle: "تكامل سلس للأنظمة",
-    skillIntegrationDesc: "عبدالله ليس نظامًا معزولًا. يمكن دمجه مع أنظمتك المصرفية الأساسية ومستودعات البيانات وتغذية بيانات السوق لسحب ودفع المعلومات، مما يثري تحليله بالسياق في الوقت الفعلي.",
+    skillIntegrationDesc: "الشات بوت ليس نظامًا معزولًا. يمكن دمجه مع أنظمتك المصرفية الأساسية ومستودعات البيانات وتغذية بيانات السوق لسحب ودفع المعلومات، مما يثري تحليله بالسياق في الوقت الفعلي.",
 
     // Data Analytics
     dataAnalyticsTitle: 'تحليلات البيانات',
@@ -300,7 +300,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     daUploadPromptDesc: "قم بتحميل ملف CSV أو XLSX أو PDF لإنشاء لوحة معلومات مع رؤى وتصورات.",
     daUploadButton: "تحميل ملف البيانات",
     daGeneratingDashboardTitle: 'جاري إنشاء لوحة المعلومات الخاصة بك...',
-    daGeneratingDashboardDesc: 'يقوم عبدالله بتحليل بياناتك للعثور على رؤى أساسية.',
+    daGeneratingDashboardDesc: 'يقوم الشات بوت بتحليل بياناتك للعثور على رؤى أساسية.',
     daSummaryTitle: "ملخص الذكاء الاصطناعي",
     daKeyInsightsTitle: "الرؤى الرئيسية",
     daDownloadPdfButton: "تحميل التقرير",
@@ -328,7 +328,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
         const browserLang = navigator.language.split('-')[0];
-        const storedLang = localStorage.getItem('abdullah-lang') as Language;
+        const storedLang = localStorage.getItem('banking-chatbot-lang') as Language;
 
         if (storedLang) {
             setLanguage(storedLang);
@@ -342,7 +342,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = language;
     document.documentElement.dir = dir;
     try {
-        localStorage.setItem('abdullah-lang', language);
+        localStorage.setItem('banking-chatbot-lang', language);
     } catch(e) {
         console.error("Failed to save language preference to localStorage", e);
     }

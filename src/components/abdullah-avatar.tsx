@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-export function AbdullahAvatar({ className }: { className?: string }) {
+export function ChatbotAvatar({ className }: { className?: string }) {
   return (
     <div
       className={cn(
@@ -15,12 +15,12 @@ export function AbdullahAvatar({ className }: { className?: string }) {
         preserveAspectRatio="none"
       >
         <defs>
-          <linearGradient id="abdullah-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id="chatbot-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" style={{ stopColor: "hsl(var(--primary))" }} />
             <stop offset="100%" style={{ stopColor: "hsl(var(--accent))" }} />
           </linearGradient>
         </defs>
-        <circle cx="50" cy="50" r="50" fill="url(#abdullah-gradient)" />
+        <circle cx="50" cy="50" r="50" fill="url(#chatbot-gradient)" />
       </svg>
     </div>
   );

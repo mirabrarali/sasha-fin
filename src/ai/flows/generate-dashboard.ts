@@ -50,7 +50,7 @@ const generateDashboardPrompt = ai.definePrompt({
   name: 'generateDashboardPrompt',
   input: {schema: GenerateDashboardInputSchema},
   output: {schema: GenerateDashboardOutputSchema},
-  prompt: `You are a world-class AI data analyst named Abdullah. Your task is to analyze the provided file and generate a comprehensive, structured dashboard report. Your entire response MUST be in the specified language: {{{language}}}.
+  prompt: `You are a world-class AI data analyst. Your task is to analyze the provided file and generate a comprehensive, structured dashboard report. Your entire response MUST be in the specified language: {{{language}}}.
 
 **Analysis Steps:**
 1.  **Understand the Data:** Examine the content of the uploaded file.

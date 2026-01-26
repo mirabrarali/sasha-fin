@@ -6,7 +6,7 @@ import { LanguageToggle } from '@/components/language-toggle';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useLanguage } from '@/context/language-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { AbdullahAvatar } from '@/components/abdullah-avatar';
+import { ChatbotAvatar } from '@/components/abdullah-avatar';
 import { Button } from '@/components/ui/button';
 import { ShieldCheck, Server, Database, BrainCircuit, Users, Globe, LineChart, TrendingUp, Filter, FileText, Landmark, Puzzle, ShieldAlert, Workflow } from 'lucide-react';
 
@@ -59,7 +59,7 @@ export default function AboutPageClient() {
         <div className="max-w-5xl mx-auto space-y-16 p-4 md:p-8 animate-in fade-in-50 duration-500">
           
           <section className="text-center pt-8">
-            <AbdullahAvatar className="w-24 h-24 mx-auto mb-6" />
+            <ChatbotAvatar className="w-24 h-24 mx-auto mb-6" />
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-br from-primary to-slate-500">
               {t('enterpriseHeader')}
             </h2>
@@ -197,5 +197,3 @@ export default function AboutPageClient() {
     </div>
   );
 }
-
-    

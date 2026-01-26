@@ -24,7 +24,7 @@ import { useLanguage } from '@/context/language-context';
 import { useToast } from '@/hooks/use-toast';
 import { generateDashboard, type GenerateDashboardOutput } from '@/ai/flows/generate-dashboard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { AbdullahStatus } from '@/components/abdullah-status';
+import { ChatbotStatus } from '@/components/abdullah-status';
 import { cn } from '@/lib/utils';
 
 const Bar = dynamic(() => import('react-chartjs-2').then(mod => mod.Bar), { ssr: false });
@@ -269,7 +269,7 @@ export default function DataAnalyticsClient() {
           {t('dataAnalyticsTitle')}
         </h1>
         <div className="justify-self-end flex items-center gap-2">
-          <AbdullahStatus />
+          <ChatbotStatus />
           {fileName && !isLoading && (
             <TooltipProvider>
                 <Tooltip>
@@ -416,5 +416,3 @@ export default function DataAnalyticsClient() {
     </div>
   );
 }
-
-    

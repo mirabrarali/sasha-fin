@@ -10,7 +10,7 @@ import {
   SidebarContent, 
   SidebarInset 
 } from '@/components/ui/sidebar';
-import { AbdullahAvatar } from '@/components/abdullah-avatar';
+import { ChatbotAvatar } from '@/components/abdullah-avatar';
 import { MainNav } from '@/components/main-nav';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
@@ -29,7 +29,7 @@ const cairo = Cairo({
   display: 'swap',
 });
 
-const APP_NAME = 'Abdullah Banking';
+const APP_NAME = 'Banking Chatbot';
 const APP_DESCRIPTION = 'Your intelligent banking assistant and financial strategist.';
 const APP_URL = new URL('https://sasha-banking-app.vercel.app'); // Replace with your actual production URL
 
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
         url: '/sasha-og.png',
         width: 1200,
         height: 630,
-        alt: 'Abdullah AI Banking Assistant',
+        alt: 'AI Banking Assistant',
       },
     ],
     locale: 'en_US',
@@ -94,8 +94,8 @@ export default function RootLayout({
             <Sidebar>
               <SidebarHeader>
                 <div className="flex items-center gap-2">
-                  <AbdullahAvatar className="w-8 h-8" />
-                  <span className="text-lg font-semibold">Abdullah</span>
+                  <ChatbotAvatar className="w-8 h-8" />
+                  <span className="text-lg font-semibold">Banking Chatbot</span>
                 </div>
               </SidebarHeader>
               <SidebarContent>

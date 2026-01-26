@@ -3,9 +3,9 @@ import type { Metadata } from 'next';
 import KnowledgeBaseClient from './knowledge-base-client';
 
 export const metadata: Metadata = {
-    title: 'Abdullah\'s Knowledge Base',
-    description: 'Customize Abdullah\'s knowledge. Add your own instructions, rules, and data for him to remember across all conversations.',
-    keywords: ['abdullah knowledge base', 'custom instructions', 'ai personalization', 'financial rules', 'abdullah settings'],
+    title: 'Chatbot Knowledge Base',
+    description: "Customize the chatbot's knowledge. Add your own instructions, rules, and data for it to remember across all conversations.",
+    keywords: ['banking chatbot knowledge base', 'custom instructions', 'ai personalization', 'financial rules', 'chatbot settings'],
 };
 
 export default function KnowledgeBasePage() {

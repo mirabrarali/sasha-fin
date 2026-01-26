@@ -12,7 +12,7 @@ type KnowledgeBase = {
     notes: string;
 };
 
-const defaultNotes = `Your custom notes, rules, and commands for Abdullah will be stored here. Abdullah will always read this file before responding to you in the main chat. 
+const defaultNotes = `Your custom notes, rules, and commands for the chatbot will be stored here. The chatbot will always read this file before responding to you in the main chat. 
 
 For example:
 - Never suggest investing in cryptocurrency.

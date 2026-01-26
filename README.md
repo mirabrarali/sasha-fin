@@ -1,14 +1,14 @@
-# Abdullah Banking - Financial AI Assistant
+# Banking Chatbot - Financial AI Assistant
 
-This is a Next.js application that provides an AI-powered financial assistant named Abdullah. Abdullah can analyze financial documents, assist with spreadsheet tasks, and engage in conversational chat about financial topics.
+This is a Next.js application that provides an AI-powered financial assistant. The chatbot can analyze financial documents, assist with spreadsheet tasks, and engage in conversational chat about financial topics.
 
 ## Core Features
 
-*   **Conversational Chat:** Engage with Abdullah for financial analysis, document queries, and general market discussion.
+*   **Conversational Chat:** Engage with the chatbot for financial analysis, document queries, and general market discussion.
 *   **Document Analysis:** Upload PDF financial statements or CSV loan data for institutional-grade analysis and reporting.
-*   **Agentic Spreadsheet:** A fully-featured spreadsheet environment where Abdullah can be commanded via natural language to perform complex tasks like financial modeling, data entry, and chart creation.
-*   **Data Analytics Dashboard:** Upload a dataset (CSV, XLSX, PDF) and have Abdullah instantly generate a dashboard with summaries, key insights, and visualizations.
-*   **Customizable Knowledge Base:** Teach Abdullah specific rules, facts, and instructions that he will remember across all interactions.
+*   **Agentic Spreadsheet:** A fully-featured spreadsheet environment where the chatbot can be commanded via natural language to perform complex tasks like financial modeling, data entry, and chart creation.
+*   **Data Analytics Dashboard:** Upload a dataset (CSV, XLSX, PDF) and have the chatbot instantly generate a dashboard with summaries, key insights, and visualizations.
+*   **Customizable Knowledge Base:** Teach the chatbot specific rules, facts, and instructions that it will remember across all interactions.
 *   **Bilingual:** All features work seamlessly in both English and Arabic.
 
 ## Tech Stack
@@ -61,5 +61,3 @@ export const ai = genkit({
 ```
 
 All AI-powered logic (flows) can be found in the `src/ai/flows/` directory.
-# sasha-fin
-```

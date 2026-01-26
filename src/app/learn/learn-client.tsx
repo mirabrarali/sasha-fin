@@ -7,7 +7,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useLanguage } from '@/context/language-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { AbdullahAvatar } from '@/components/abdullah-avatar';
+import { ChatbotAvatar } from '@/components/abdullah-avatar';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -95,7 +95,7 @@ export default function LearnPageClient() {
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in-50 duration-500">
           <div className="flex flex-col items-center text-center space-y-4">
-            <AbdullahAvatar className="w-20 h-20" />
+            <ChatbotAvatar className="w-20 h-20" />
             <h2 className="text-3xl font-bold tracking-tight">{t('learnPageTitle')}</h2>
             <p className="text-lg text-muted-foreground max-w-2xl">
               {t('learnIntro')}
@@ -165,9 +165,9 @@ export default function LearnPageClient() {
             <CardHeader>
               <div className="flex items-center gap-3">
                 <BrainCircuit className="w-7 h-7 text-primary" />
-                <CardTitle>{t('comingSoonAbdullahTitle')}</CardTitle>
+                <CardTitle>{t('comingSoonChatbotTitle')}</CardTitle>
               </div>
-              <CardDescription>{t('comingSoonAbdullahDesc')}</CardDescription>
+              <CardDescription>{t('comingSoonChatbotDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
@@ -223,7 +223,7 @@ export default function LearnPageClient() {
 
           <div className="flex flex-col items-center gap-4 mt-12 mb-8">
             <Button asChild size="lg" className="font-semibold text-base px-8 py-6 bg-gradient-to-br from-slate-900 to-slate-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-              <Link href="/chat">{t('getStartedAbdullah')}</Link>
+              <Link href="/chat">{t('getStartedChatbot')}</Link>
             </Button>
             <Button asChild variant="link" className="text-muted-foreground">
               <Link href="/spreadsheet">{t('getStartedSpreadsheet')}</Link>
