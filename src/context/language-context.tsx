@@ -14,8 +14,8 @@ interface LanguageContextType {
 
 const translations: { [key in Language]: { [key: string]: string } } = {
   en: {
-    pageTitle: 'Banking Chatbot',
-    initialMessage: "Hello! I'm your financial assistant. I have built-in knowledge about a sample loan dataset. You can ask me to 'analyze loan id LP001002' or ask other questions about the data.",
+    pageTitle: 'Sohar International Bank Chat assistant',
+    initialMessage: "Hi, I am your Sohar international chat assistant how can I help you today",
     placeholder: "Ask about loan data or upload a PDF...",
     uploadPdfTooltip: "Upload Financial PDF",
     sendSr: "Send",
@@ -151,8 +151,8 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     daAnalysisFailedDesc: "Could not generate dashboard. Check the file format or try a different file.",
   },
   ar: {
-    pageTitle: 'الشات بوت المصرفي',
-    initialMessage: "مرحباً! أنا مساعدك المالي. لدي معرفة مدمجة حول مجموعة بيانات قروض نموذجية. يمكنك أن تطلب مني 'تحليل معرف القرض LP001002' أو طرح أسئلة أخرى حول البيانات.",
+    pageTitle: 'مساعد الدردشة من بنك صحار الدولي',
+    initialMessage: "مرحباً، أنا مساعد الدردشة الخاص بك من بنك صحار الدولي، كيف يمكنني مساعدتك اليوم؟",
     placeholder: "اسأل عن بيانات القروض أو قم بتحميل ملف PDF...",
     uploadPdfTooltip: "تحميل ملف PDF مالي",
     sendSr: "إرسال",
