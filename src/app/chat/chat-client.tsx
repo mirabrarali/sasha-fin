@@ -4,8 +4,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import * as XLSX from 'xlsx';
-import { CornerDownLeft, FileUp, FileText, XCircle, Loader2, RefreshCw, UploadCloud, KeyRound } from 'lucide-react';
+import { CornerDownLeft, FileText, XCircle, Loader2, RefreshCw, UploadCloud, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -129,11 +128,8 @@ export default function ChatPageClient() {
   const [isLoading, setIsLoading] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [csvData, setCsvData] = useState<string | null>(null);
-  const [csvFileName, setCsvFileName] = useState<string | null>(null);
   const [pdfData, setPdfData] = useState<string | null>(null);
   const [pdfFileName, setPdfFileName] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
@@ -142,7 +138,6 @@ export default function ChatPageClient() {
     report: ReportToDownload;
     inputs: {
       pdfDataUri?: string | null;
-      csvData?: string | null;
       loanId?: string;
     }
   } | null>(null);
@@ -160,7 +155,7 @@ export default function ChatPageClient() {
     const items = e.dataTransfer?.items;
     if (items && items.length > 0) {
       const fileType = items[0].type;
-      setIsDragValid(fileType === 'application/pdf' || fileType === 'text/csv' || fileType === 'application/vnd.ms-excel' || fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      setIsDragValid(fileType === 'application/pdf');
     }
   };
 
@@ -183,20 +178,13 @@ export default function ChatPageClient() {
     const files = e.dataTransfer?.files;
     if (files && files.length > 0) {
       const file = files[0];
-      const fileType = file.type;
-      
-      const isCsvOrXlsx = fileType === 'text/csv' || fileType === 'application/vnd.ms-excel' || fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-      const isPdf = fileType === 'application/pdf';
-
-      if (isPdf) {
+      if (file.type === 'application/pdf') {
         handlePdfUpload({ target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>);
-      } else if (isCsvOrXlsx) {
-        handleFileUpload({ target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>);
       } else {
         toast({
             variant: 'destructive',
             title: t('daUnsupportedFileType'),
-            description: t('daDragDropUnsupported'),
+            description: t('daDragDropUnsupportedPdf'),
         });
       }
     }
@@ -285,17 +273,10 @@ export default function ChatPageClient() {
       const loanAnalysisMatch = currentInput.trim().match(/^analyze loan id (\S+)/i);
       
       if (loanAnalysisMatch) {
-        if (!csvData) {
-          toast({ variant: 'destructive', title: t('genericErrorTitle'), description: t('uploadCsvFirst') });
-          setMessages(prev => prev.slice(0, prev.length - 1)); // Remove user message
-          setIsLoading(false);
-          return;
-        }
-        
         const loanId = loanAnalysisMatch[1];
         setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: t('loanAnalysisHeader', { loanId }) }]);
         
-        const report = await analyzeLoan({ csvData, loanId, language });
+        const report = await analyzeLoan({ loanId, language });
         const analysisMessage: Message = {
           id: Date.now().toString(),
           role: 'assistant',
@@ -306,7 +287,7 @@ export default function ChatPageClient() {
 
       } else {
         const historyForApi = newMessages.map(({ id, analysisReport, financialReport, ...rest }) => rest);
-        const response = await chat({ history: historyForApi, pdfDataUri: pdfData, csvData: csvData, language });
+        const response = await chat({ history: historyForApi, pdfDataUri: pdfData, language });
         
         const botResponse: Message = {
           id: Date.now().toString(),
@@ -331,59 +312,6 @@ export default function ChatPageClient() {
       }]);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.name.endsWith('.csv') && !file.name.endsWith('.xlsx')) {
-        toast({
-            variant: 'destructive',
-            title: t('daUnsupportedFileType'),
-            description: 'Please upload a CSV or XLSX file.',
-        });
-        return;
-    }
-    
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-        const data = e.target?.result;
-        let csvString: string;
-
-        try {
-            if (file.name.endsWith('.xlsx')) {
-                const workbook = XLSX.read(data, { type: 'binary' });
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
-                csvString = XLSX.utils.sheet_to_csv(worksheet);
-            } else {
-                // For CSV, we need to handle different encodings, but for now, assume UTF-8
-                csvString = data as string;
-            }
-
-            setCsvData(csvString);
-            setCsvFileName(file.name);
-            toast({
-              title: t('csvUploadTitle'),
-              description: t('csvUploadDesc', { fileName: file.name }),
-            });
-        } catch (error) {
-            console.error("File processing failed:", error);
-            toast({
-                variant: "destructive",
-                title: t("genericErrorTitle"),
-                description: "Failed to process the uploaded file."
-            });
-        }
-    };
-
-    if (file.name.endsWith('.xlsx')) {
-        reader.readAsBinaryString(file);
-    } else {
-        reader.readAsText(file); // FileReader's readAsText handles encoding better
     }
   };
 
@@ -461,27 +389,12 @@ export default function ChatPageClient() {
       content: t('clearedPdfMessage')
     }]);
   };
-
-  const handleClearCsv = () => {
-    setCsvData(null);
-    setCsvFileName(null);
-    toast({
-      title: t('csvClearedTitle'),
-      description: t('csvClearedDesc'),
-    });
-    setMessages(prev => [...prev, {
-      id: Date.now().toString(),
-      role: 'assistant',
-      content: t('clearedCsvMessage')
-    }]);
-  };
   
   const promptDownload = (type: ReportType, report: ReportToDownload | undefined) => {
     if (!report) return;
 
-    const inputs = {
+    const inputs: { pdfDataUri?: string | null; loanId?: string } = {
         pdfDataUri: type === 'financial' ? pdfData : null,
-        csvData: type === 'loan' ? csvData : null,
         loanId: (report as NonNullable<Message['analysisReport']>)?.loanId
     };
 
@@ -504,9 +417,8 @@ export default function ChatPageClient() {
           pdfDataUri: downloadInfo.inputs.pdfDataUri,
           language: lang,
         });
-      } else if (downloadInfo.type === 'loan' && downloadInfo.inputs.csvData && downloadInfo.inputs.loanId) {
+      } else if (downloadInfo.type === 'loan' && downloadInfo.inputs.loanId) {
         const report = await analyzeLoan({
-          csvData: downloadInfo.inputs.csvData,
           loanId: downloadInfo.inputs.loanId,
           language: lang,
         });
@@ -577,8 +489,6 @@ export default function ChatPageClient() {
       console.error("Failed to clear localStorage:", error);
     }
     
-    setCsvData(null);
-    setCsvFileName(null);
     setPdfData(null);
     setPdfFileName(null);
 
@@ -738,25 +648,6 @@ export default function ChatPageClient() {
                   </main>
                   <footer className="p-4 border-t shrink-0 bg-background">
                     <div className="max-w-3xl mx-auto">
-                      {csvFileName && (
-                          <div className="flex items-center justify-between p-2 mb-2 text-sm rounded-md bg-muted text-muted-foreground">
-                          <div className="flex items-center gap-2 truncate">
-                              <FileUp className="w-4 h-4 shrink-0" />
-                              <span className="font-medium truncate">{t('analyzingFile', { fileName: csvFileName })}</span>
-                          </div>
-                          <TooltipProvider>
-                          <Tooltip>
-                              <TooltipTrigger asChild>
-                              <Button type="button" variant="ghost" size="icon" onClick={handleClearCsv} className="w-6 h-6 shrink-0">
-                                  <XCircle className="w-4 h-4" />
-                                  <span className="sr-only">{t('clearCsvTooltip')}</span>
-                              </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>{t('clearCsvTooltip')}</TooltipContent>
-                          </Tooltip>
-                          </TooltipProvider>
-                          </div>
-                      )}
                       {pdfFileName && (
                           <div className="flex items-center justify-between p-2 mb-2 text-sm rounded-md bg-muted text-muted-foreground">
                           <div className="flex items-center gap-2 truncate">
@@ -781,7 +672,7 @@ export default function ChatPageClient() {
                           value={input}
                           onChange={(e) => setInput(e.target.value)}
                           placeholder={t('placeholder')}
-                          className="pr-28 sm:pr-32 md:pr-36 py-3 text-base resize-none"
+                          className="pr-24 sm:pr-28 md:pr-32 py-3 text-base resize-none"
                           onKeyDown={(e) => {
                               if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
@@ -791,18 +682,8 @@ export default function ChatPageClient() {
                           rows={1}
                           />
                           <div className="absolute top-1/2 right-2 sm:right-3 transform -translate-y-1/2 flex items-center space-x-0.5 sm:space-x-1">
-                            <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".csv,.xlsx" className="hidden" />
                             <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} accept="application/pdf" className="hidden" />
                             <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                <Button type="button" variant="ghost" size="icon" className="h-9 w-9" onClick={() => fileInputRef.current?.click()}>
-                                    <FileUp className="w-5 h-5" />
-                                    <span className="sr-only">{t('uploadCsvTooltip')}</span>
-                                </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>{t('uploadCsvTooltip')}</TooltipContent>
-                            </Tooltip>
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                 <Button type="button" variant="ghost" size="icon" className="h-9 w-9" onClick={() => pdfInputRef.current?.click()}>
@@ -873,7 +754,7 @@ export default function ChatPageClient() {
                         <p className={cn("text-lg font-semibold", isDragValid ? "text-primary" : "text-destructive")}>
                             {isDragValid ? t('daDragDropValid') : t('daDragDropInvalid')}
                         </p>
-                        <p className="text-sm text-muted-foreground">{t('daDragDropSupported')}</p>
+                        <p className="text-sm text-muted-foreground">{t('daDragDropSupportedPdf')}</p>
                     </div>
                 </div>
             )}

@@ -10,9 +10,9 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { loanDataCsv } from '@/data/loan_data';
 
 const AnalyzeLoanInputSchema = z.object({
-  csvData: z.string().describe('The loan data in CSV format.'),
   loanId: z.string().describe('The specific Loan ID to analyze from the CSV data.'),
   language: z.enum(['en', 'ar']).default('en').describe('The language for the response, either English (en) or Arabic (ar).'),
 });
@@ -29,9 +29,13 @@ export async function analyzeLoan(input: AnalyzeLoanInput): Promise<AnalyzeLoanO
   return analyzeLoanFlow(input);
 }
 
+const AnalyzeLoanPromptInputSchema = AnalyzeLoanInputSchema.extend({
+  csvData: z.string(),
+});
+
 const analyzeLoanPrompt = ai.definePrompt({
   name: 'analyzeLoanPrompt',
-  input: {schema: AnalyzeLoanInputSchema},
+  input: {schema: AnalyzeLoanPromptInputSchema},
   output: {schema: AnalyzeLoanOutputSchema},
   prompt: `You are an expert loan analyst for a bank. Your task is to analyze a specific loan application from a provided CSV dataset. Your entire report MUST be written in the following language: {{{language}}}.
 
@@ -60,7 +64,11 @@ const analyzeLoanFlow = ai.defineFlow(
     outputSchema: AnalyzeLoanOutputSchema,
   },
   async (input) => {
-    const {output} = await analyzeLoanPrompt(input);
+    const promptInput = {
+      ...input,
+      csvData: loanDataCsv,
+    };
+    const {output} = await analyzeLoanPrompt(promptInput);
     return output!;
   }
 );

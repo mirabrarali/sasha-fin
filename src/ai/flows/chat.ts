@@ -11,6 +11,7 @@
 import { ai } from '@/ai/genkit';
 import { MessageData, z } from 'genkit';
 import { getKnowledge } from '@/actions/knowledge-base-actions';
+import { loanDataCsv } from '@/data/loan_data';
 
 const MessageSchema = z.object({
   role: z.enum(['user', 'assistant']),
@@ -26,11 +27,6 @@ const ChatInputSchema = z.object({
     .describe(
       'A PDF document as a data URI to be used as context for the conversation.'
     ),
-  csvData: z
-    .string()
-    .nullable()
-    .optional()
-    .describe('A CSV data string to be used as context for the conversation.'),
   language: z
     .enum(['en', 'ar'])
     .default('en')
@@ -97,12 +93,13 @@ const chatFlow = ai.defineFlow(
           { media: { url: input.pdfDataUri } },
         ],
       });
-    } else if (input.csvData) {
+    } else {
+      // If no PDF is provided, use the hardcoded loan data as the default context.
       messages.unshift({
         role: 'user',
         content: [
           {
-            text: `The user has ALREADY uploaded a CSV file with the following data. Use this as context for our conversation. The user can ask me to analyze a specific loan by its ID, or ask general questions about the data. I can also be asked to generate charts from this data.\n\n\`\`\`csv\n${input.csvData}\n\`\`\``,
+            text: `The user has access to the following CSV data. Use this as context for our conversation. The user can ask me to analyze a specific loan by its ID, or ask general questions about the data. I can also be asked to generate charts from this data.\n\n\`\`\`csv\n${loanDataCsv}\n\`\`\``,
           },
         ],
       });
