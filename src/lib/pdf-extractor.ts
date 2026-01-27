@@ -3,8 +3,11 @@
  * Extracts text content from base64-encoded PDF, CSV, and XLSX documents
  */
 
-import pdf from 'pdf-parse';
 import * as XLSX from 'xlsx';
+
+// pdf-parse uses CommonJS export without default, import as namespace
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pdfParse = require('pdf-parse');
 
 export interface FileExtractionResult {
     text: string;
@@ -29,7 +32,7 @@ export async function extractTextFromFile(base64DataUri: string): Promise<FileEx
 
     try {
         if (mimeType === 'application/pdf') {
-            const data = await pdf(buffer);
+            const data = await pdfParse(buffer);
             return {
                 text: data.text,
                 type: 'pdf',

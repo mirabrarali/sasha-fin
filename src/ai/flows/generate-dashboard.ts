@@ -74,7 +74,8 @@ export async function generateDashboard(input: GenerateDashboardInput): Promise<
     }
 
     // Step 2: Set up structured output parser
-    const parser = StructuredOutputParser.fromZodSchema(GenerateDashboardOutputSchema);
+    // Use type assertion to avoid "Type instantiation is excessively deep" error with complex nested schemas
+    const parser = StructuredOutputParser.fromZodSchema(GenerateDashboardOutputSchema as z.ZodTypeAny);
     const formatInstructions = parser.getFormatInstructions();
 
     // Step 3: Create prompt template
