@@ -82,7 +82,8 @@ export async function analyzeFinancialStatement(input: AnalyzeFinancialStatement
 
     // Step 2: Set up structured output parser
     // Use type assertion to avoid "Type instantiation is excessively deep" error with complex nested schemas
-    const parser = StructuredOutputParser.fromZodSchema(AnalyzeFinancialStatementOutputSchema as z.ZodTypeAny);
+    // Workaround: Cast to any to bypass TypeScript's deep type inference for complex Zod schemas
+    const parser = StructuredOutputParser.fromZodSchema(AnalyzeFinancialStatementOutputSchema as any);
     const formatInstructions = parser.getFormatInstructions();
 
     // Step 3: Create prompt template
