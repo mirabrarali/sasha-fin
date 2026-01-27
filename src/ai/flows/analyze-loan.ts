@@ -1,15 +1,14 @@
 'use server';
 
 /**
- * @fileOverview A flow for analyzing loan data from a CSV file.
- *
- * - analyzeLoan - A function that handles the loan analysis.
- * - AnalyzeLoanInput - The input type for the analyzeLoan function.
- * - AnalyzeLoanOutput - The return type for the analyzeLoan function.
+ * @fileOverview Loan Analysis using LangChain + Groq
+ * Migrated from Genkit to LangChain for better performance
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { llm } from '@/ai/langchain';
+import { StructuredOutputParser } from '@langchain/core/output_parsers';
+import { PromptTemplate } from '@langchain/core/prompts';
+import { z } from 'zod';
 import { loanDataCsv } from '@/data/loan_data';
 
 const AnalyzeLoanInputSchema = z.object({
@@ -25,21 +24,9 @@ const AnalyzeLoanOutputSchema = z.object({
 });
 export type AnalyzeLoanOutput = z.infer<typeof AnalyzeLoanOutputSchema>;
 
-export async function analyzeLoan(input: AnalyzeLoanInput): Promise<AnalyzeLoanOutput> {
-  return analyzeLoanFlow(input);
-}
+const SYSTEM_PROMPT = `You are an expert bank analyst. Your task is to analyze a specific customer account from a provided CSV dataset. Even though this flow is for "loan analysis", you should adapt your analysis for the provided customer account data.
 
-const AnalyzeLoanPromptInputSchema = AnalyzeLoanInputSchema.extend({
-  csvData: z.string(),
-});
-
-const analyzeLoanPrompt = ai.definePrompt({
-  name: 'analyzeLoanPrompt',
-  input: {schema: AnalyzeLoanPromptInputSchema},
-  output: {schema: AnalyzeLoanOutputSchema},
-  prompt: `You are an expert bank analyst. Your task is to analyze a specific customer account from a provided CSV dataset. Even though this flow is for "loan analysis", you should adapt your analysis for the provided customer account data. Your entire report MUST be written in the following language: {{{language}}}.
-
-Find the row in the following CSV data that corresponds to the AccountNumber: {{{loanId}}}.
+Find the row in the following CSV data that corresponds to the AccountNumber: {loanId}.
 
 Once you have located the correct account, perform a comprehensive analysis based on all available columns for that row.
 
@@ -48,26 +35,47 @@ Generate a report with the following sections, interpreting them for a general b
 2.  **prediction:** Based on the balance and account status, make a 'prediction' about the customer's financial stability. You can use terms like 'Stable', 'High Value', 'Needs Attention'. This is a proxy for loan risk prediction.
 3.  **eligibility:** Based on the analysis, provide a statement on their 'eligibility' for premium bank services or special offers. This is a proxy for loan eligibility.
 
+{format_instructions}
+
 Here is the CSV data:
 \`\`\`csv
-{{{csvData}}}
+{csvData}
 \`\`\`
 
-Analyze the account with AccountNumber: {{{loanId}}}.`,
-});
+Analyze the account with AccountNumber: {loanId}.`;
 
-const analyzeLoanFlow = ai.defineFlow(
-  {
-    name: 'analyzeLoanFlow',
-    inputSchema: AnalyzeLoanInputSchema,
-    outputSchema: AnalyzeLoanOutputSchema,
-  },
-  async (input) => {
-    const promptInput = {
-      ...input,
+export async function analyzeLoan(input: AnalyzeLoanInput): Promise<AnalyzeLoanOutput> {
+  try {
+    // Set up structured output parser
+    const parser = StructuredOutputParser.fromZodSchema(AnalyzeLoanOutputSchema);
+    const formatInstructions = parser.getFormatInstructions();
+
+    // Create prompt template
+    const promptTemplate = new PromptTemplate({
+      template: SYSTEM_PROMPT,
+      inputVariables: ['loanId', 'csvData', 'language'],
+      partialVariables: { format_instructions: formatInstructions },
+    });
+
+    // Format prompt
+    const prompt = await promptTemplate.format({
+      loanId: input.loanId,
       csvData: loanDataCsv,
-    };
-    const {output} = await analyzeLoanPrompt(promptInput);
-    return output!;
+      language: input.language === 'ar' ? 'Arabic' : 'English',
+    });
+
+    // Invoke LLM
+    console.log(`Analyzing loan ${input.loanId}...`);
+    const response = await llm.invoke(prompt);
+
+    // Parse structured output
+    const result = await parser.parse(response.content as string);
+
+    console.log('Loan analysis completed successfully');
+    return result;
+
+  } catch (error) {
+    console.error('Loan analysis error:', error);
+    throw new Error(`Failed to analyze loan: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-);
+}

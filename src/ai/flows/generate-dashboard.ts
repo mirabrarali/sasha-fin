@@ -1,16 +1,16 @@
-
 'use server';
 
 /**
- * @fileOverview A flow for generating a data analysis dashboard from a file (CSV, XLSX, PDF).
- *
- * - generateDashboard - A function that handles the dashboard generation.
- * - GenerateDashboardInput - The input type for the generateDashboard function.
- * - GenerateDashboardOutput - The return type for the generateDashboard function.
+ * @fileOverview Data Analysis Dashboard Generation using LangChain + Groq
+ * Migrated from Genkit to LangChain for better performance
+ * No longer uses vision models - handles all input files via text extraction
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { llm } from '@/ai/langchain';
+import { extractTextFromFile, cleanText } from '@/lib/pdf-extractor';
+import { StructuredOutputParser } from '@langchain/core/output_parsers';
+import { PromptTemplate } from '@langchain/core/prompts';
+import { z } from 'zod';
 
 const GenerateDashboardInputSchema = z.object({
   fileDataUri: z
@@ -23,11 +23,11 @@ const GenerateDashboardInputSchema = z.object({
 export type GenerateDashboardInput = z.infer<typeof GenerateDashboardInputSchema>;
 
 const ChartDataSchema = z.object({
-    labels: z.array(z.string()).describe('The labels for the chart axes or segments.'),
-    datasets: z.array(z.object({
-        label: z.string().describe('The label for the dataset.'),
-        data: z.array(z.number()).describe('The numerical data for the dataset.'),
-    })).describe('The datasets to be plotted.'),
+  labels: z.array(z.string()).describe('The labels for the chart axes or segments.'),
+  datasets: z.array(z.object({
+    label: z.string().describe('The label for the dataset.'),
+    data: z.array(z.number()).describe('The numerical data for the dataset.'),
+  })).describe('The datasets to be plotted.'),
 });
 
 const GenerateDashboardOutputSchema = z.object({
@@ -42,43 +42,62 @@ const GenerateDashboardOutputSchema = z.object({
 });
 export type GenerateDashboardOutput = z.infer<typeof GenerateDashboardOutputSchema>;
 
-export async function generateDashboard(input: GenerateDashboardInput): Promise<GenerateDashboardOutput> {
-  return generateDashboardFlow(input);
-}
-
-const generateDashboardPrompt = ai.definePrompt({
-  name: 'generateDashboardPrompt',
-  input: {schema: GenerateDashboardInputSchema},
-  output: {schema: GenerateDashboardOutputSchema},
-  prompt: `You are a world-class AI data analyst. Your task is to analyze the provided file and generate a comprehensive, structured dashboard report. Your entire response MUST be in the specified language: {{{language}}}.
+const SYSTEM_PROMPT = `You are a world-class AI data analyst. Your task is to analyze the provided data and generate a comprehensive, structured dashboard report.
 
 **Analysis Steps:**
-1.  **Understand the Data:** Examine the content of the uploaded file.
-    *   If it's a CSV or XLSX file, parse the columns and rows to understand the structure and content of the dataset. Identify categorical and numerical columns.
-    *   If it's a PDF, extract any tabular data or key textual information that can be quantified. If the PDF contains tables, treat them as the primary data source. If it contains mostly text, summarize the key points and try to extract quantifiable metrics if possible.
+1.  **Understand the Data:** Examine the content of the data. Identify categorical and numerical columns, tabular structures, or key textual information.
 2.  **Generate a Title:** Create a concise, descriptive title for the dashboard based on the data content.
-3.  **Create a Comprehensive Summary:** Write an insightful, multi-paragraph summary. Discuss the overall dataset, identify key trends, point out any interesting relationships between columns (or concepts in the text), and mention any potential outliers or anomalies.
+3.  **Create a Comprehensive Summary:** Write an insightful, multi-paragraph summary. Discuss the overall dataset, identify key trends, point out any interesting relationships between columns, and mention any potential outliers or anomalies.
 4.  **Extract Key Insights:** Distill your analysis into a list of 3-5 critical, bullet-point insights. These should be the most important takeaways for a business user.
-5.  **Propose Visualizations:** Generate the data for up to two compelling charts to visualize the data.
-    *   **Bar Chart:** If applicable, identify a categorical column and a numerical column to create a meaningful bar chart (e.g., sales by region, count of items per category).
-    *   **Pie Chart:** If applicable, identify a categorical column suitable for a pie chart to show proportions (e.g., market share, status distribution).
-    *   **Data Formatting:** The data for each chart must be perfectly formatted to match the Chart.js data structure provided in the output schema. Labels should be the names of categories, and data should be the corresponding numerical values. Ensure the 'label' in the dataset is descriptive.
-    *   If no quantifiable data can be extracted from the PDF, return an empty array for the charts.
+5.  **Propose Visualizations:** Generate the data for up to two compelling charts (Bar or Pie) to visualize the data. Ensure the data is perfectly formatted for Chart.js.
 
-**Input File:**
-{{media url=fileDataUri}}
+{format_instructions}
 
-Analyze the data and generate the full dashboard report object.`,
-});
+Language: {language}`;
 
-const generateDashboardFlow = ai.defineFlow(
-  {
-    name: 'generateDashboardFlow',
-    inputSchema: GenerateDashboardInputSchema,
-    outputSchema: GenerateDashboardOutputSchema,
-  },
-  async (input) => {
-    const {output} = await generateDashboardPrompt(input);
-    return output!;
+export async function generateDashboard(input: GenerateDashboardInput): Promise<GenerateDashboardOutput> {
+  try {
+    // Step 1: Extract text from file
+    console.log('Extracting data from file...');
+    const { text, type } = await extractTextFromFile(input.fileDataUri);
+    const cleanedText = cleanText(text);
+
+    console.log(`Extracted ${cleanedText.length} characters from ${type} file`);
+
+    if (!cleanedText || cleanedText.length < 50) {
+      throw new Error('Insufficient data extracted from file. Please ensure the file contains readable content.');
+    }
+
+    // Step 2: Set up structured output parser
+    const parser = StructuredOutputParser.fromZodSchema(GenerateDashboardOutputSchema);
+    const formatInstructions = parser.getFormatInstructions();
+
+    // Step 3: Create prompt template
+    const promptTemplate = new PromptTemplate({
+      template: SYSTEM_PROMPT + '\n\nData Content ({type}):\n{dataContent}',
+      inputVariables: ['language', 'type', 'dataContent'],
+      partialVariables: { format_instructions: formatInstructions },
+    });
+
+    // Step 4: Format prompt
+    const prompt = await promptTemplate.format({
+      language: input.language === 'ar' ? 'Arabic' : 'English',
+      type: type.toUpperCase(),
+      dataContent: cleanedText.slice(0, 40000), // Limit to avoid token limits
+    });
+
+    // Step 5: Invoke LLM
+    console.log('Generating dashboard analysis...');
+    const response = await llm.invoke(prompt);
+
+    // Step 6: Parse structured output
+    const result = await parser.parse(response.content as string);
+
+    console.log('Dashboard generation completed successfully');
+    return result;
+
+  } catch (error) {
+    console.error('Dashboard generation error:', error);
+    throw new Error(`Failed to generate dashboard: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-);
+}

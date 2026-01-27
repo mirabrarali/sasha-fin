@@ -1,15 +1,16 @@
 'use server';
 
 /**
- * @fileOverview A flow for analyzing a company's financial statement from a PDF.
- *
- * - analyzeFinancialStatement - A function that handles the financial statement analysis.
- * - AnalyzeFinancialStatementInput - The input type for the analyzeFinancialStatement function.
- * - AnalyzeFinancialStatementOutput - The return type for the analyzeFinancialStatement function.
+ * @fileOverview Financial Statement Analysis using LangChain + Groq
+ * Migrated from Genkit to LangChain for better performance
+ * Uses PDF text extraction instead of vision models
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { llm } from '@/ai/langchain';
+import { extractTextFromPDF, cleanPDFText } from '@/lib/pdf-extractor';
+import { StructuredOutputParser } from '@langchain/core/output_parsers';
+import { PromptTemplate } from '@langchain/core/prompts';
+import { z } from 'zod';
 
 const AnalyzeFinancialStatementInputSchema = z.object({
   pdfDataUri: z
@@ -35,17 +36,9 @@ const AnalyzeFinancialStatementOutputSchema = z.object({
 });
 export type AnalyzeFinancialStatementOutput = z.infer<typeof AnalyzeFinancialStatementOutputSchema>;
 
-export async function analyzeFinancialStatement(input: AnalyzeFinancialStatementInput): Promise<AnalyzeFinancialStatementOutput> {
-  return analyzeFinancialStatementFlow(input);
-}
+const SYSTEM_PROMPT = `You are an elite AI financial entity embodying the combined expertise of a Big Four auditor, a chartered accountant (CA), and a senior investment analyst. You have deep expertise in Middle Eastern financial markets, particularly **Omani credit bureau standards**. Your task is to perform a forensic, critical, and insightful analysis of a company's or individual's financial statement.
 
-const analyzeFinancialStatementPrompt = ai.definePrompt({
-  name: 'analyzeFinancialStatementPrompt',
-  input: {schema: AnalyzeFinancialStatementInputSchema},
-  output: {schema: AnalyzeFinancialStatementOutputSchema},
-  prompt: `You are an elite AI financial entity embodying the combined expertise of a Big Four auditor, a chartered accountant (CA), and a senior investment analyst. You have deep expertise in Middle Eastern financial markets, particularly **Omani credit bureau standards**. Your task is to perform a forensic, critical, and insightful analysis of a company's or individual's financial statement from a provided PDF.
-
-Your goal is to be surgically precise, focusing exclusively on the financial data to produce an institutional-quality report. Your entire report MUST be written in the following language: {{{language}}}.
+Your goal is to be surgically precise, focusing exclusively on the financial data to produce an institutional-quality report.
 
 1.  **Forensic Data Extraction:** Scan the document to locate primary financial statements (Income Statement, Balance Sheet, Cash Flow Statement). Disregard all non-essential narrative. Your extraction must be meticulous, as if preparing for an audit.
 
@@ -59,26 +52,58 @@ Your goal is to be surgically precise, focusing exclusively on the financial dat
         *   **Leverage:** Debt-to-Equity Ratio, Debt-to-Asset Ratio.
     *   **Trend Analysis:** Identify significant year-over-year (YoY) changes and question their drivers.
 
-3.  **Generate In-Depth Report:** Synthesize your findings into a detailed report with six sections, filling the corresponding output fields:
+3.  **Generate In-Depth Report:** Synthesize your findings into a detailed report with six sections:
     *   **summary:** Provide an expansive, multi-paragraph summary of the entity's financial health. Weave in the KPIs and ratios to support your analysis of strengths and weaknesses.
-    *   **trendsAndGraphs:** Provide a narrative description of the key financial trends (e.g., YoY revenue growth, margin changes). For each trend, describe a graph that would visually represent it (e.g., "A bar chart showing revenue increasing from $5M to $8M over three years").
-    *   **prediction:** Offer a clear, evidence-backed prediction of the company's future financial trajectory (e.g., "Strong Growth Potential," "Stable but Cautious," "High-Risk"). Justify this by citing specific ratios, trends, and cash flow dynamics.
+    *   **trendsAndGraphs:** Provide a narrative description of the key financial trends (e.g., YoY revenue growth, margin changes). For each trend, describe a graph that would visually represent it.
+    *   **prediction:** Offer a clear, evidence-backed prediction of the company's future financial trajectory. Justify this by citing specific ratios, trends, and cash flow dynamics.
     *   **creditScorePrediction:** Based on your analysis, provide a predicted credit score (as a specific number or a tight range, e.g., 680-720), framed within **Omani and general Middle Eastern credit bureau standards**. Justify the score.
-    *   **identifiedFlaws:** List any critical financial flaws, risks, or red flags as a list of distinct points. These could include high debt, declining margins, poor cash flow, revenue concentration, or unusual accounting. Each point should be a separate string in the array.
-    *   **keyMetrics:** Extract historical data for 'revenue' and 'netIncome' for the last few periods (up to 5, if available). Structure this as an array of objects, where each object has 'name' (the year/period), 'revenue', and 'netIncome'. This data will be used to generate a chart. If the data is not available or not applicable, return an empty array.
+    *   **identifiedFlaws:** List any critical financial flaws, risks, or red flags as a list of distinct points.
+    *   **keyMetrics:** Extract historical data for 'revenue' and 'netIncome' for the last few periods (up to 5, if available). Structure this as an array of objects with 'name', 'revenue', and 'netIncome'.
 
-Analyze the following PDF document with utmost precision:
-{{media url=pdfDataUri}}`,
-});
+{format_instructions}`;
 
-const analyzeFinancialStatementFlow = ai.defineFlow(
-  {
-    name: 'analyzeFinancialStatementFlow',
-    inputSchema: AnalyzeFinancialStatementInputSchema,
-    outputSchema: AnalyzeFinancialStatementOutputSchema,
-  },
-  async (input) => {
-    const {output} = await analyzeFinancialStatementPrompt(input);
-    return output!;
+export async function analyzeFinancialStatement(input: AnalyzeFinancialStatementInput): Promise<AnalyzeFinancialStatementOutput> {
+  try {
+    // Step 1: Extract text from PDF
+    console.log('Extracting text from PDF...');
+    const { text, numPages } = await extractTextFromPDF(input.pdfDataUri);
+    const cleanedText = cleanPDFText(text);
+
+    console.log(`Extracted ${cleanedText.length} characters from ${numPages} pages`);
+
+    if (!cleanedText || cleanedText.length < 100) {
+      throw new Error('Insufficient text extracted from PDF. Please ensure the PDF contains readable text.');
+    }
+
+    // Step 2: Set up structured output parser
+    const parser = StructuredOutputParser.fromZodSchema(AnalyzeFinancialStatementOutputSchema);
+    const formatInstructions = parser.getFormatInstructions();
+
+    // Step 3: Create prompt template
+    const promptTemplate = new PromptTemplate({
+      template: SYSTEM_PROMPT + '\n\nLanguage: {language}\n\nFinancial Statement Text:\n{documentText}',
+      inputVariables: ['language', 'documentText'],
+      partialVariables: { format_instructions: formatInstructions },
+    });
+
+    // Step 4: Format prompt
+    const prompt = await promptTemplate.format({
+      language: input.language === 'ar' ? 'Arabic' : 'English',
+      documentText: cleanedText.slice(0, 50000), // Limit to 50k chars to avoid token limits
+    });
+
+    // Step 5: Invoke LLM
+    console.log('Analyzing financial statement with LLM...');
+    const response = await llm.invoke(prompt);
+
+    // Step 6: Parse structured output
+    const result = await parser.parse(response.content as string);
+
+    console.log('Financial analysis completed successfully');
+    return result;
+
+  } catch (error) {
+    console.error('Financial statement analysis error:', error);
+    throw new Error(`Failed to analyze financial statement: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-);
+}

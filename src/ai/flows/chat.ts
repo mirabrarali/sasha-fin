@@ -1,15 +1,17 @@
 'use server';
 
 /**
- * @fileOverview A conversational AI flow for the Banking Chatbot.
- *
- * - chat - A function that handles the chat conversation.
- * - ChatInput - The input type for the chat function.
- * - ChatOutput - The return type for the chat function.
+ * @fileOverview Conversational AI Chat using LangChain + Groq
+ * Migrated from Genkit to LangChain for better performance
+ * No longer uses vision models - PDF context is handled via text extraction
  */
 
-import { ai } from '@/ai/genkit';
-import { MessageData, z } from 'genkit';
+import { chatLLM } from '@/ai/langchain';
+import { extractTextFromPDF, cleanPDFText } from '@/lib/pdf-extractor';
+import { StructuredOutputParser } from '@langchain/core/output_parsers';
+import { PromptTemplate } from '@langchain/core/prompts';
+import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages';
+import { z } from 'zod';
 import { getKnowledge } from '@/actions/knowledge-base-actions';
 import { loanDataCsv } from '@/data/loan_data';
 
@@ -55,16 +57,7 @@ const ChatOutputSchema = z.object({
 export type ChatOutput = z.infer<typeof ChatOutputSchema>;
 
 export async function chat(input: ChatInput): Promise<ChatOutput> {
-  return chatFlow(input);
-}
-
-const chatFlow = ai.defineFlow(
-  {
-    name: 'chatFlow',
-    inputSchema: ChatInputSchema,
-    outputSchema: ChatOutputSchema,
-  },
-  async (input) => {
+  try {
     const firstUserMessageIndex = input.history.findIndex(
       (m) => m.role === 'user'
     );
@@ -76,36 +69,43 @@ const chatFlow = ai.defineFlow(
       };
     }
 
-    const messages: MessageData[] = input.history
+    // Build conversation history
+    const messages: (HumanMessage | AIMessage)[] = input.history
       .slice(firstUserMessageIndex)
-      .map((message) => ({
-        role: message.role === 'assistant' ? 'model' : 'user',
-        content: [{ text: message.content }],
-      }));
+      .map((message) =>
+        message.role === 'assistant'
+          ? new AIMessage(message.content)
+          : new HumanMessage(message.content)
+      );
+
+    // Build context from PDF or CSV
+    let contextText = '';
 
     if (input.pdfDataUri) {
-      messages.unshift({
-        role: 'user',
-        content: [
-          {
-            text: 'The user has ALREADY uploaded the following PDF. I have ALREADY analyzed it and provided a report card. For the rest of the conversation, this document is the primary context. Answer questions based on its content, and if asked to create a chart or graph, use the data from this document.',
-          },
-          { media: { url: input.pdfDataUri } },
-        ],
-      });
+      try {
+        console.log('Extracting PDF context for chat...');
+        const { text } = await extractTextFromPDF(input.pdfDataUri);
+        const cleanedText = cleanPDFText(text);
+        contextText = `The user has ALREADY uploaded the following PDF document. I have ALREADY analyzed it and provided a report card. For the rest of the conversation, this document is the primary context. Answer questions based on its content, and if asked to create a chart or graph, use the data from this document.
+
+PDF Content:
+${cleanedText.slice(0, 30000)}`; // Limit to 30k chars for context
+      } catch (error) {
+        console.error('Failed to extract PDF for chat context:', error);
+        contextText = 'A PDF was uploaded but could not be processed. Please ask the user to re-upload.';
+      }
     } else {
-      // If no PDF is provided, use the hardcoded loan data as the default context.
-      messages.unshift({
-        role: 'user',
-        content: [
-          {
-            text: `The user has access to the following customer account CSV data. Use this as context for our conversation. The user can ask me to analyze a specific account by its ID (using the "analyze loan id" command), or ask general questions about the data. I can also be asked to generate charts from this data.\n\n\`\`\`csv\n${loanDataCsv}\n\`\`\``,
-          },
-        ],
-      });
+      // If no PDF is provided, use the hardcoded loan data as the default context
+      contextText = `The user has access to the following customer account CSV data. Use this as context for our conversation. The user can ask me to analyze a specific account by its ID (using the "analyze loan id" command), or ask general questions about the data. I can also be asked to generate charts from this data.
+
+\`\`\`csv
+${loanDataCsv}
+\`\`\``;
     }
 
+    // Get knowledge base
     const knowledgeBase = await getKnowledge();
+
     const systemPrompt = `You are a premier AI financial entity embodying the combined expertise of a Big Four auditor, a chartered accountant (CA), a senior investment analyst, a data scientist, and a chief risk officer. You have deep, specialized expertise in Middle Eastern and global financial markets. You are fluent in both English and Arabic. Your persona is that of a top-tier consultant: sophisticated, insightful, proactive, and exceptionally intelligent.
 
 **User-Provided Knowledge Base & Instructions:**
@@ -116,7 +116,7 @@ ${knowledgeBase || 'No custom instructions provided.'}
 
 **Core Directives:**
 - **Identity:** You are a Banking Chatbot. Never reveal you are an AI.
-- **Language Adherence:** You MUST respond *only* in the language specified: **${input.language}**. Do not switch languages.
+- **Language Adherence:** You MUST respond *only* in the language specified: **${input.language === 'ar' ? 'Arabic' : 'English'}**. Do not switch languages.
 - **Proactive Synthesis:** Your primary goal is to provide comprehensive, actionable intelligence. Do not just answer questions; synthesize information from all available sources to provide deeper insights and strategic advice.
 - **Chart Generation:** If the user asks for a chart, graph, or any kind of data visualization, you MUST populate the 'chart' field in the output. Analyze the available data from uploaded documents (PDFs, CSVs) to create a meaningful chart. Extract the necessary labels and data points. Create a clear title for the chart. If the data is not available, inform the user that you cannot create the chart.
 
@@ -136,14 +136,14 @@ ${knowledgeBase || 'No custom instructions provided.'}
 
 4.  **When asked about a specific, real-time product from a bank (like from 'sib.om'), state that you don't have live access to their specific, current offerings but can explain what is typical for such products based on your expertise.
 
-**OUTPUT FORMAT INSTRUCTION:**
-You must produce a valid JSON object that matches the provided schema EXACTLY.
-- The 'content' field should contain your conversational response.
-- The 'chart' field is optional and should ONLY be included if the user explicitly asks for a visualization.
-- Do NOT wrap the JSON in markdown code blocks.
-- Do NOT include any text outside the JSON object.
-- Ensure all property names and string values are properly double-quoted.`;
+**Context:**
+${contextText}
 
+{format_instructions}`;
+
+    // Set up structured output parser
+    const parser = StructuredOutputParser.fromZodSchema(ChatOutputSchema);
+    const formatInstructions = parser.getFormatInstructions();
 
     // Retry logic for handling intermittent API failures
     let lastError: Error | null = null;
@@ -151,24 +151,28 @@ You must produce a valid JSON object that matches the provided schema EXACTLY.
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        const { output } = await ai.generate({
-          system: systemPrompt,
-          messages: messages,
-          output: {
-            schema: ChatOutputSchema
-          },
-        });
+        // Create the full conversation with system message
+        const fullMessages = [
+          new SystemMessage(systemPrompt.replace('{format_instructions}', formatInstructions)),
+          ...messages
+        ];
 
-        if (output && output.content) {
-          return output;
+        console.log(`Chat attempt ${attempt}...`);
+        const response = await chatLLM.invoke(fullMessages);
+
+        // Parse structured output
+        const result = await parser.parse(response.content as string);
+
+        if (result && result.content) {
+          console.log('Chat completed successfully');
+          return result;
         }
 
-        // If output is null or invalid, treat as error
         throw new Error('Invalid response from AI model');
 
       } catch (error) {
         lastError = error as Error;
-        console.error(`AI generation attempt ${attempt} failed:`, error);
+        console.error(`Chat attempt ${attempt} failed:`, error);
 
         // Don't retry on the last attempt
         if (attempt < maxRetries) {
@@ -180,11 +184,15 @@ You must produce a valid JSON object that matches the provided schema EXACTLY.
     }
 
     // All retries failed - return a graceful error message
-    console.error('All AI generation attempts failed:', lastError);
+    console.error('All chat attempts failed:', lastError);
     return {
       content: input.language === 'ar'
         ? 'عذراً، واجهت مشكلة مؤقتة في الاتصال بخدمة الذكاء الاصطناعي. يرجى المحاولة مرة أخرى.'
         : 'I apologize, but I encountered a temporary issue connecting to the AI service. Please try again in a moment.',
     };
+
+  } catch (error) {
+    console.error('Chat error:', error);
+    throw new Error(`Chat failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-);
+}
