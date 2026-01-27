@@ -26,6 +26,7 @@ import { generateDashboard, type GenerateDashboardOutput } from '@/ai/flows/gene
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ChatbotStatus } from '@/components/abdullah-status';
 import { cn } from '@/lib/utils';
+import { FILE_SIZE_LIMITS } from '@/lib/constants';
 
 const Bar = dynamic(() => import('react-chartjs-2').then(mod => mod.Bar), { ssr: false });
 const Pie = dynamic(() => import('react-chartjs-2').then(mod => mod.Pie), { ssr: false });
@@ -185,6 +186,7 @@ export default function DataAnalyticsClient() {
     setFileName(file.name);
 
     try {
+      // Validate file type
       if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.csv') && !file.name.endsWith('.pdf')) {
         toast({
             variant: 'destructive',
@@ -196,6 +198,27 @@ export default function DataAnalyticsClient() {
         return;
       }
 
+      // Validate file size based on file type
+      let maxSize = FILE_SIZE_LIMITS.DEFAULT;
+      if (file.name.endsWith('.pdf')) {
+        maxSize = FILE_SIZE_LIMITS.PDF;
+      } else if (file.name.endsWith('.csv') || file.name.endsWith('.xlsx')) {
+        maxSize = FILE_SIZE_LIMITS.CSV;
+      }
+
+      if (file.size > maxSize) {
+        const maxSizeMB = maxSize / (1024 * 1024);
+        toast({
+          variant: 'destructive',
+          title: t('fileTooLargeTitle') || 'File Too Large',
+          description: t('fileTooLargeDesc', { maxSize: maxSizeMB }) || `File size exceeds ${maxSizeMB}MB limit. Please upload a smaller file.`,
+        });
+        setIsLoading(false);
+        handleClear();
+        if (e.target) e.target.value = '';
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = async (event) => {
         try {
@@ -204,12 +227,13 @@ export default function DataAnalyticsClient() {
             const result = await generateDashboard({ fileDataUri: dataUri, language });
             setDashboardData(result);
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Analysis failed:", error);
+            const errorMessage = error instanceof Error ? error.message : t('daAnalysisFailedDesc');
             toast({
                 variant: 'destructive',
                 title: t('analysisFailedTitle'),
-                description: error.message || t('daAnalysisFailedDesc'),
+                description: errorMessage,
             });
             handleClear();
         } finally {
@@ -219,12 +243,13 @@ export default function DataAnalyticsClient() {
       };
       reader.readAsDataURL(file);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("File upload failed:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         variant: 'destructive',
         title: t('analysisFailedTitle'),
-        description: error.message,
+        description: errorMessage,
       });
       handleClear();
       setIsLoading(false);

@@ -31,6 +31,8 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { ChatbotStatus } from '@/components/abdullah-status';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import { FILE_SIZE_LIMITS } from '@/lib/constants';
+import { saveChatHistory, loadChatHistory, clearChatHistory } from '@/lib/storage-utils';
 
 const generateAndDownloadPdf = async (element: HTMLElement, fileName: string) => {
     try {
@@ -149,19 +151,13 @@ export default function ChatPageClient() {
 
   useEffect(() => {
     try {
-      // Load chat history
-      const savedMessages = localStorage.getItem('banking-chatbot-chat-history');
-      if (savedMessages) {
-        const parsedMessages = JSON.parse(savedMessages);
-        if (Array.isArray(parsedMessages) && parsedMessages.length > 0) {
-          setMessages(parsedMessages);
-        } else {
-          setMessages([{ id: '1', role: 'assistant', content: t('initialMessage') }]);
-        }
+      // Load chat history with size management
+      const savedMessages = loadChatHistory();
+      if (savedMessages && Array.isArray(savedMessages) && savedMessages.length > 0) {
+        setMessages(savedMessages);
       } else {
         setMessages([{ id: '1', role: 'assistant', content: t('initialMessage') }]);
       }
-
     } catch (error) {
       console.error("Failed to access localStorage:", error);
       setMessages([{ id: '1', role: 'assistant', content: t('initialMessage') }]);
@@ -169,16 +165,14 @@ export default function ChatPageClient() {
   }, [t]);
   
   useEffect(() => {
-    // Save messages if a user has sent a message
+    // Save messages if a user has sent a message, with size management
     if (messages.some(m => m.role === 'user')) {
-        try {
-            localStorage.setItem('banking-chatbot-chat-history', JSON.stringify(messages));
-        } catch (error) {
-            console.error("Failed to save messages to localStorage:", error);
+        const result = saveChatHistory(messages);
+        if (!result.success && result.error) {
             toast({
                 variant: 'destructive',
                 title: t('sessionSaveErrorTitle'),
-                description: t('sessionSaveErrorDesc')
+                description: result.error || t('sessionSaveErrorDesc')
             });
         }
     }
@@ -269,12 +263,29 @@ export default function ChatPageClient() {
 
   const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || file.type !== 'application/pdf') {
+    if (!file) {
+      return;
+    }
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
       toast({
         variant: 'destructive',
         title: t('invalidPdfTitle'),
         description: t('invalidPdfDesc'),
       });
+      return;
+    }
+
+    // Validate file size
+    if (file.size > FILE_SIZE_LIMITS.PDF) {
+      const maxSizeMB = FILE_SIZE_LIMITS.PDF / (1024 * 1024);
+      toast({
+        variant: 'destructive',
+        title: t('fileTooLargeTitle') || 'File Too Large',
+        description: t('fileTooLargeDesc', { maxSize: maxSizeMB }) || `File size exceeds ${maxSizeMB}MB limit. Please upload a smaller file.`,
+      });
+      if (event.target) event.target.value = '';
       return;
     }
     
@@ -435,11 +446,7 @@ export default function ChatPageClient() {
 
   const handleNewSession = () => {
     setMessages([{ id: '1', role: 'assistant', content: t('initialMessage') }]);
-    try {
-      localStorage.removeItem('banking-chatbot-chat-history');
-    } catch (error) {
-      console.error("Failed to clear localStorage:", error);
-    }
+    clearChatHistory();
     
     setPdfData(null);
     setPdfFileName(null);
@@ -500,7 +507,7 @@ export default function ChatPageClient() {
       const chartHtml = (financialReport.keyMetrics && financialReport.keyMetrics.length > 0) ? (
         <>
            <h2 style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '15px', marginBottom: '5px' }}>{selectedTitles.financialPerformanceTitle}</h2>
-           <div style={{ width: '680px' , height: '320px'}}>
+           <div style={{ width: '680px', height: '320px' }}>
               <FinancialReportChart 
                 data={financialReport.keyMetrics} 
                 revenueLabel={selectedTitles.revenue} 

@@ -15,7 +15,7 @@ This is a Next.js application that provides an AI-powered financial assistant. T
 
 *   **Framework:** Next.js (App Router)
 *   **UI:** React, TypeScript, ShadCN UI, Tailwind CSS
-*   **AI/Generative:** Groq Llama 3.1 Instant via Genkit
+*   **AI/Generative:** Groq Llama 3.3 70B Versatile via LangChain
 *   **Spreadsheet:** Handsontable
 *   **Charts:** Recharts, Chart.js
 
@@ -45,18 +45,19 @@ npm run dev
 
 The application will be available at `http://localhost:9002`.
 
-## Genkit AI Configuration
+## LangChain AI Configuration
 
-The AI model is configured in `src/ai/genkit.ts`. It now uses the powerful `llama-3.3-70b-versatile` model via Groq for high-quality, structured JSON responses.
+The AI model is configured in `src/ai/langchain.ts`. It uses the powerful `llama-3.3-70b-versatile` model via Groq for high-quality, structured JSON responses.
 
 ```typescript
-// src/ai/genkit.ts
-import { genkit } from 'genkit';
-import { groq, llama33x70bVersatile } from 'genkitx-groq';
+// src/ai/langchain.ts
+import { ChatGroq } from '@langchain/groq';
 
-export const ai = genkit({
-  plugins: [groq({ apiKey: process.env.GROQ_API_KEY })],
-  model: llama33x70bVersatile,
+export const llm = new ChatGroq({
+  apiKey: process.env.GROQ_API_KEY,
+  model: 'llama-3.3-70b-versatile',
+  temperature: 0.1,
+  maxTokens: 8000,
 });
 ```
 

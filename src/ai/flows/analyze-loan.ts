@@ -5,11 +5,12 @@
  * Migrated from Genkit to LangChain for better performance
  */
 
-import { llm } from '@/ai/langchain';
+import { getLLM } from '@/ai/langchain';
 import { StructuredOutputParser } from '@langchain/core/output_parsers';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { z } from 'zod';
 import { loanDataCsv } from '@/data/loan_data';
+import { withLLMTimeout } from '@/lib/timeout-utils';
 
 const AnalyzeLoanInputSchema = z.object({
   loanId: z.string().describe('The specific AccountNumber to analyze from the CSV data.'),
@@ -64,9 +65,15 @@ export async function analyzeLoan(input: AnalyzeLoanInput): Promise<AnalyzeLoanO
       language: input.language === 'ar' ? 'Arabic' : 'English',
     });
 
-    // Invoke LLM
+    // Validate loan ID format (basic validation)
+    if (!input.loanId || input.loanId.trim().length === 0) {
+      throw new Error('Loan ID is required and cannot be empty');
+    }
+
+    // Invoke LLM with timeout
     console.log(`Analyzing loan ${input.loanId}...`);
-    const response = await llm.invoke(prompt);
+    const llm = getLLM();
+    const response = await withLLMTimeout(llm.invoke(prompt));
 
     // Parse structured output
     const result = await parser.parse(response.content as string);
@@ -76,6 +83,13 @@ export async function analyzeLoan(input: AnalyzeLoanInput): Promise<AnalyzeLoanO
 
   } catch (error) {
     console.error('Loan analysis error:', error);
-    throw new Error(`Failed to analyze loan: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Provide user-friendly error messages
+    if (errorMessage.includes('timed out')) {
+      throw new Error('Analysis timed out. Please try again.');
+    }
+    
+    throw new Error(`Failed to analyze loan: ${errorMessage}`);
   }
 }

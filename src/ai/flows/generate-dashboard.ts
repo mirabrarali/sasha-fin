@@ -6,11 +6,13 @@
  * No longer uses vision models - handles all input files via text extraction
  */
 
-import { llm } from '@/ai/langchain';
+import { getLLM } from '@/ai/langchain';
 import { extractTextFromFile, cleanText } from '@/lib/pdf-extractor';
 import { StructuredOutputParser } from '@langchain/core/output_parsers';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { z } from 'zod';
+import { CONTEXT_LIMITS, TIMEOUTS } from '@/lib/constants';
+import { withLLMTimeout, withFileOperationTimeout } from '@/lib/timeout-utils';
 
 const GenerateDashboardInputSchema = z.object({
   fileDataUri: z
@@ -57,9 +59,12 @@ Language: {language}`;
 
 export async function generateDashboard(input: GenerateDashboardInput): Promise<GenerateDashboardOutput> {
   try {
-    // Step 1: Extract text from file
+    // Step 1: Extract text from file with timeout
     console.log('Extracting data from file...');
-    const { text, type } = await extractTextFromFile(input.fileDataUri);
+    const { text, type } = await withFileOperationTimeout(
+      extractTextFromFile(input.fileDataUri),
+      TIMEOUTS.FILE_UPLOAD
+    );
     const cleanedText = cleanText(text);
 
     console.log(`Extracted ${cleanedText.length} characters from ${type} file`);
@@ -79,16 +84,17 @@ export async function generateDashboard(input: GenerateDashboardInput): Promise<
       partialVariables: { format_instructions: formatInstructions },
     });
 
-    // Step 4: Format prompt
+    // Step 4: Format prompt with context limit
     const prompt = await promptTemplate.format({
       language: input.language === 'ar' ? 'Arabic' : 'English',
       type: type.toUpperCase(),
-      dataContent: cleanedText.slice(0, 40000), // Limit to avoid token limits
+      dataContent: cleanedText.slice(0, CONTEXT_LIMITS.DASHBOARD), // Limit to configured chars
     });
 
-    // Step 5: Invoke LLM
+    // Step 5: Invoke LLM with timeout
     console.log('Generating dashboard analysis...');
-    const response = await llm.invoke(prompt);
+    const llm = getLLM();
+    const response = await withLLMTimeout(llm.invoke(prompt));
 
     // Step 6: Parse structured output
     const result = await parser.parse(response.content as string);
@@ -98,6 +104,13 @@ export async function generateDashboard(input: GenerateDashboardInput): Promise<
 
   } catch (error) {
     console.error('Dashboard generation error:', error);
-    throw new Error(`Failed to generate dashboard: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Provide user-friendly error messages
+    if (errorMessage.includes('timed out')) {
+      throw new Error('Dashboard generation timed out. The file may be too large or complex. Please try a smaller file or try again.');
+    }
+    
+    throw new Error(`Failed to generate dashboard: ${errorMessage}`);
   }
 }

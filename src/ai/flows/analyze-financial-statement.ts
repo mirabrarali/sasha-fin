@@ -6,11 +6,13 @@
  * Uses PDF text extraction instead of vision models
  */
 
-import { llm } from '@/ai/langchain';
+import { getLLM } from '@/ai/langchain';
 import { extractTextFromPDF, cleanPDFText } from '@/lib/pdf-extractor';
 import { StructuredOutputParser } from '@langchain/core/output_parsers';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { z } from 'zod';
+import { CONTEXT_LIMITS, TIMEOUTS } from '@/lib/constants';
+import { withLLMTimeout, withFileOperationTimeout } from '@/lib/timeout-utils';
 
 const AnalyzeFinancialStatementInputSchema = z.object({
   pdfDataUri: z
@@ -64,9 +66,12 @@ Your goal is to be surgically precise, focusing exclusively on the financial dat
 
 export async function analyzeFinancialStatement(input: AnalyzeFinancialStatementInput): Promise<AnalyzeFinancialStatementOutput> {
   try {
-    // Step 1: Extract text from PDF
+    // Step 1: Extract text from PDF with timeout
     console.log('Extracting text from PDF...');
-    const { text, numPages } = await extractTextFromPDF(input.pdfDataUri);
+    const { text, numPages } = await withFileOperationTimeout(
+      extractTextFromPDF(input.pdfDataUri),
+      TIMEOUTS.PDF_EXTRACTION
+    );
     const cleanedText = cleanPDFText(text);
 
     console.log(`Extracted ${cleanedText.length} characters from ${numPages} pages`);
@@ -86,15 +91,16 @@ export async function analyzeFinancialStatement(input: AnalyzeFinancialStatement
       partialVariables: { format_instructions: formatInstructions },
     });
 
-    // Step 4: Format prompt
+    // Step 4: Format prompt with context limit
     const prompt = await promptTemplate.format({
       language: input.language === 'ar' ? 'Arabic' : 'English',
-      documentText: cleanedText.slice(0, 50000), // Limit to 50k chars to avoid token limits
+      documentText: cleanedText.slice(0, CONTEXT_LIMITS.FINANCIAL_STATEMENT), // Limit to configured chars
     });
 
-    // Step 5: Invoke LLM
+    // Step 5: Invoke LLM with timeout
     console.log('Analyzing financial statement with LLM...');
-    const response = await llm.invoke(prompt);
+    const llm = getLLM();
+    const response = await withLLMTimeout(llm.invoke(prompt));
 
     // Step 6: Parse structured output
     const result = await parser.parse(response.content as string);
@@ -104,6 +110,13 @@ export async function analyzeFinancialStatement(input: AnalyzeFinancialStatement
 
   } catch (error) {
     console.error('Financial statement analysis error:', error);
-    throw new Error(`Failed to analyze financial statement: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Provide user-friendly error messages
+    if (errorMessage.includes('timed out')) {
+      throw new Error('Analysis timed out. The document may be too large or complex. Please try a smaller file or try again.');
+    }
+    
+    throw new Error(`Failed to analyze financial statement: ${errorMessage}`);
   }
 }

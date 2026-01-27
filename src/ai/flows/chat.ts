@@ -6,7 +6,7 @@
  * No longer uses vision models - PDF context is handled via text extraction
  */
 
-import { chatLLM } from '@/ai/langchain';
+import { getChatLLM } from '@/ai/langchain';
 import { extractTextFromPDF, cleanPDFText } from '@/lib/pdf-extractor';
 import { StructuredOutputParser } from '@langchain/core/output_parsers';
 import { PromptTemplate } from '@langchain/core/prompts';
@@ -14,6 +14,8 @@ import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages
 import { z } from 'zod';
 import { getKnowledge } from '@/actions/knowledge-base-actions';
 import { loanDataCsv } from '@/data/loan_data';
+import { CONTEXT_LIMITS, RETRY_CONFIG } from '@/lib/constants';
+import { withLLMTimeout } from '@/lib/timeout-utils';
 
 const MessageSchema = z.object({
   role: z.enum(['user', 'assistant']),
@@ -89,7 +91,7 @@ export async function chat(input: ChatInput): Promise<ChatOutput> {
         contextText = `The user has ALREADY uploaded the following PDF document. I have ALREADY analyzed it and provided a report card. For the rest of the conversation, this document is the primary context. Answer questions based on its content, and if asked to create a chart or graph, use the data from this document.
 
 PDF Content:
-${cleanedText.slice(0, 30000)}`; // Limit to 30k chars for context
+${cleanedText.slice(0, CONTEXT_LIMITS.CHAT_PDF)}`; // Limit to configured chars for context
       } catch (error) {
         console.error('Failed to extract PDF for chat context:', error);
         contextText = 'A PDF was uploaded but could not be processed. Please ask the user to re-upload.';
@@ -147,7 +149,7 @@ ${contextText}
 
     // Retry logic for handling intermittent API failures
     let lastError: Error | null = null;
-    const maxRetries = 3;
+    const maxRetries = RETRY_CONFIG.MAX_ATTEMPTS;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -158,7 +160,10 @@ ${contextText}
         ];
 
         console.log(`Chat attempt ${attempt}...`);
-        const response = await chatLLM.invoke(fullMessages);
+        
+        // Invoke LLM with timeout
+        const chatLLM = getChatLLM();
+        const response = await withLLMTimeout(chatLLM.invoke(fullMessages));
 
         // Parse structured output
         const result = await parser.parse(response.content as string);
@@ -176,8 +181,8 @@ ${contextText}
 
         // Don't retry on the last attempt
         if (attempt < maxRetries) {
-          // Exponential backoff: 1s, 2s, 4s
-          const delayMs = Math.pow(2, attempt - 1) * 1000;
+          // Exponential backoff
+          const delayMs = RETRY_CONFIG.INITIAL_DELAY_MS * Math.pow(RETRY_CONFIG.BACKOFF_MULTIPLIER, attempt - 1);
           await new Promise(resolve => setTimeout(resolve, delayMs));
         }
       }
