@@ -48,7 +48,8 @@ Analyze the account with AccountNumber: {loanId}.`;
 export async function analyzeLoan(input: AnalyzeLoanInput): Promise<AnalyzeLoanOutput> {
   try {
     // Set up structured output parser
-    const parser = StructuredOutputParser.fromZodSchema(AnalyzeLoanOutputSchema);
+    // Workaround: Cast to any to bypass TypeScript's deep type inference for complex schemas
+    const parser = StructuredOutputParser.fromZodSchema(AnalyzeLoanOutputSchema as any);
     const formatInstructions = parser.getFormatInstructions();
 
     // Create prompt template
@@ -76,7 +77,7 @@ export async function analyzeLoan(input: AnalyzeLoanInput): Promise<AnalyzeLoanO
     const response = await withLLMTimeout(llm.invoke(prompt));
 
     // Parse structured output
-    const result = await parser.parse(response.content as string);
+    const result = await parser.parse(response.content as string) as AnalyzeLoanOutput;
 
     console.log('Loan analysis completed successfully');
     return result;
