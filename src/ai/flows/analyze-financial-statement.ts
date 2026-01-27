@@ -105,7 +105,7 @@ export async function analyzeFinancialStatement(input: AnalyzeFinancialStatement
     const response = await withLLMTimeout(llm.invoke(prompt));
 
     // Step 6: Parse structured output
-    const result = await parser.parse(response.content as string);
+    const result = await parser.parse(response.content as string) as AnalyzeFinancialStatementOutput;
 
     console.log('Financial analysis completed successfully');
     return result;

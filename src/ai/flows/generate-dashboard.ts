@@ -99,7 +99,7 @@ export async function generateDashboard(input: GenerateDashboardInput): Promise<
     const response = await withLLMTimeout(llm.invoke(prompt));
 
     // Step 6: Parse structured output
-    const result = await parser.parse(response.content as string);
+    const result = await parser.parse(response.content as string) as GenerateDashboardOutput;
 
     console.log('Dashboard generation completed successfully');
     return result;
