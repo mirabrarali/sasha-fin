@@ -134,7 +134,15 @@ ${knowledgeBase || 'No custom instructions provided.'}
     - Common practices in the banking industry.
     - Answers to any general financial question the user asks.
 
-4.  **When asked about a specific, real-time product from a bank (like from 'sib.om'), state that you don't have live access to their specific, current offerings but can explain what is typical for such products based on your expertise.`;
+4.  **When asked about a specific, real-time product from a bank (like from 'sib.om'), state that you don't have live access to their specific, current offerings but can explain what is typical for such products based on your expertise.
+
+**OUTPUT FORMAT INSTRUCTION:**
+You must produce a valid JSON object that matches the provided schema EXACTLY.
+- The `content` field should contain your conversational response.
+- The `chart` field is optional and should ONLY be included if the user explicitly asks for a visualization.
+- Do NOT wrap the JSON in markdown code blocks.
+- Do NOT include any text outside the JSON object.
+- Ensure all property names and string values are properly double-quoted.`;
 
     const { output } = await ai.generate({
       system: systemPrompt,
