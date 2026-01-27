@@ -47,16 +47,16 @@ The application will be available at `http://localhost:9002`.
 
 ## Genkit AI Configuration
 
-The AI model is configured in `src/ai/genkit.ts`. By default, it uses the `llama-3.1-8b-instant` model via Groq.
+The AI model is configured in `src/ai/genkit.ts`. It now uses the powerful `llama-3.3-70b-versatile` model via Groq for high-quality, structured JSON responses.
 
 ```typescript
 // src/ai/genkit.ts
 import { genkit } from 'genkit';
-import { groq, llama31x8bInstant } from 'genkitx-groq';
+import { groq, llama33x70bVersatile } from 'genkitx-groq';
 
 export const ai = genkit({
   plugins: [groq({ apiKey: process.env.GROQ_API_KEY })],
-  model: llama31x8bInstant,
+  model: llama33x70bVersatile,
 });
 ```
 
