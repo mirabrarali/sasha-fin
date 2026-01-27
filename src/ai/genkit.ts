@@ -1,9 +1,9 @@
 
 import { genkit } from 'genkit';
-import { googleAI } from '@genkit-ai/googleai';
+import { groq, llama31x8bInstant } from 'genkitx-groq';
 
-// Default configuration using Google's Gemini 2.5 Flash model
+// Default configuration using Groq's Llama 3.1 Instant model
 export const ai = genkit({
-  plugins: [googleAI()],
-  model: 'googleai/gemini-2.5-flash',
+  plugins: [groq({ apiKey: process.env.GROQ_API_KEY })],
+  model: llama31x8bInstant,
 });
