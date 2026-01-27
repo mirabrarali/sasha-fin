@@ -138,8 +138,8 @@ ${knowledgeBase || 'No custom instructions provided.'}
 
 **OUTPUT FORMAT INSTRUCTION:**
 You must produce a valid JSON object that matches the provided schema EXACTLY.
-- The `content` field should contain your conversational response.
-- The `chart` field is optional and should ONLY be included if the user explicitly asks for a visualization.
+- The 'content' field should contain your conversational response.
+- The 'chart' field is optional and should ONLY be included if the user explicitly asks for a visualization.
 - Do NOT wrap the JSON in markdown code blocks.
 - Do NOT include any text outside the JSON object.
 - Ensure all property names and string values are properly double-quoted.`;
