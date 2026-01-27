@@ -15,7 +15,7 @@ This is a Next.js application that provides an AI-powered financial assistant. T
 
 *   **Framework:** Next.js (App Router)
 *   **UI:** React, TypeScript, ShadCN UI, Tailwind CSS
-*   **AI/Generative:** Google Gemini via Genkit
+*   **AI/Generative:** Groq Llama 3.1 Instant via Genkit
 *   **Spreadsheet:** Handsontable
 *   **Charts:** Recharts, Chart.js
 
@@ -31,10 +31,10 @@ npm install
 
 ### 2. Set Up Environment Variables
 
-Create a file named `.env` in the root of your project and add your Google Gemini API key. You can get a key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+Create a file named `.env` in the root of your project and add your Groq API key. You can get a key from the [Groq Console](https://console.groq.com).
 
 ```
-GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE
+GROQ_API_KEY=YOUR_GROQ_API_KEY_HERE
 ```
 
 ### 3. Run the Development Server
@@ -47,16 +47,16 @@ The application will be available at `http://localhost:9002`.
 
 ## Genkit AI Configuration
 
-The AI model is configured in `src/ai/genkit.ts`. By default, it uses the `gemini-1.5-flash-latest` model.
+The AI model is configured in `src/ai/genkit.ts`. By default, it uses the `llama-3.1-8b-instant` model via Groq.
 
 ```typescript
 // src/ai/genkit.ts
-import {genkit} from 'genkit';
-import {googleAI} from '@genkit-ai/googleai';
+import { genkit } from 'genkit';
+import { groq, llama31x8bInstant } from 'genkitx-groq';
 
 export const ai = genkit({
-  plugins: [googleAI()],
-  model: 'googleai/gemini-1.5-flash-latest',
+  plugins: [groq({ apiKey: process.env.GROQ_API_KEY })],
+  model: llama31x8bInstant,
 });
 ```
 
