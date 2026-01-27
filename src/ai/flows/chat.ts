@@ -144,14 +144,47 @@ You must produce a valid JSON object that matches the provided schema EXACTLY.
 - Do NOT include any text outside the JSON object.
 - Ensure all property names and string values are properly double-quoted.`;
 
-    const { output } = await ai.generate({
-      system: systemPrompt,
-      messages: messages,
-      output: {
-        schema: ChatOutputSchema
-      },
-    });
 
-    return output!;
+    // Retry logic for handling intermittent API failures
+    let lastError: Error | null = null;
+    const maxRetries = 3;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const { output } = await ai.generate({
+          system: systemPrompt,
+          messages: messages,
+          output: {
+            schema: ChatOutputSchema
+          },
+        });
+
+        if (output && output.content) {
+          return output;
+        }
+
+        // If output is null or invalid, treat as error
+        throw new Error('Invalid response from AI model');
+
+      } catch (error) {
+        lastError = error as Error;
+        console.error(`AI generation attempt ${attempt} failed:`, error);
+
+        // Don't retry on the last attempt
+        if (attempt < maxRetries) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delayMs = Math.pow(2, attempt - 1) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      }
+    }
+
+    // All retries failed - return a graceful error message
+    console.error('All AI generation attempts failed:', lastError);
+    return {
+      content: input.language === 'ar'
+        ? 'عذراً، واجهت مشكلة مؤقتة في الاتصال بخدمة الذكاء الاصطناعي. يرجى المحاولة مرة أخرى.'
+        : 'I apologize, but I encountered a temporary issue connecting to the AI service. Please try again in a moment.',
+    };
   }
 );
