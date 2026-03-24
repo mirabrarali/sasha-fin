@@ -7,7 +7,7 @@
  */
 
 import { getChatLLM } from '@/ai/langchain';
-import { extractTextFromPDF, cleanPDFText } from '@/lib/pdf-extractor';
+import { extractTextFromFile, cleanText } from '@/lib/pdf-extractor';
 import { StructuredOutputParser } from '@langchain/core/output_parsers';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages';
@@ -29,7 +29,7 @@ const ChatInputSchema = z.object({
     .nullable()
     .optional()
     .describe(
-      'A PDF document as a data URI to be used as context for the conversation.'
+      'An uploaded document (PDF, CSV, or XLSX) as a data URI for conversation context.'
     ),
   language: z
     .enum(['en', 'ar'])
@@ -85,16 +85,17 @@ export async function chat(input: ChatInput): Promise<ChatOutput> {
 
     if (input.pdfDataUri) {
       try {
-        console.log('Extracting PDF context for chat...');
-        const { text } = await extractTextFromPDF(input.pdfDataUri);
-        const cleanedText = cleanPDFText(text);
-        contextText = `The user has ALREADY uploaded the following PDF document. I have ALREADY analyzed it and provided a report card. For the rest of the conversation, this document is the primary context. Answer questions based on its content, and if asked to create a chart or graph, use the data from this document.
+        console.log('Extracting uploaded document context for chat...');
+        const { text } = await extractTextFromFile(input.pdfDataUri);
+        const cleanedText = cleanText(text);
+        contextText = `The user has ALREADY uploaded a financial document (PDF, spreadsheet, or CSV). I have ALREADY analyzed it and provided a report card. For the rest of the conversation, this document is the primary context. Answer questions based on its content, and if asked to create a chart or graph, use the data from this document.
 
-PDF Content:
+Document content:
 ${cleanedText.slice(0, CONTEXT_LIMITS.CHAT_PDF)}`; // Limit to configured chars for context
       } catch (error) {
-        console.error('Failed to extract PDF for chat context:', error);
-        contextText = 'A PDF was uploaded but could not be processed. Please ask the user to re-upload.';
+        console.error('Failed to extract uploaded file for chat context:', error);
+        contextText =
+          'A document was uploaded but could not be processed. Please ask the user to re-upload a valid PDF, CSV, or XLSX file.';
       }
     } else {
       // If no PDF is provided, use the hardcoded loan data as the default context
@@ -123,8 +124,8 @@ ${knowledgeBase || 'No custom instructions provided.'}
 - **Chart Generation:** If the user asks for a chart, graph, or any kind of data visualization, you MUST populate the 'chart' field in the output. Analyze the available data from uploaded documents (PDFs, CSVs) to create a meaningful chart. Extract the necessary labels and data points. Create a clear title for the chart. If the data is not available, inform the user that you cannot create the chart.
 
 **Knowledge & Interaction Hierarchy:**
-1.  **Primacy of Uploaded Documents:** The user may have uploaded a PDF (e.g., financial statements) or a CSV (e.g., loan data).
-    *   **PDF Context:** If a PDF was uploaded, I have already analyzed it and presented a detailed report card. My subsequent conversation MUST be based on the contents of that PDF. I will act as an expert on that document.
+1.  **Primacy of Uploaded Documents:** The user may have uploaded a PDF, CSV, or Excel spreadsheet (e.g., financial statements or tabular data).
+    *   **Uploaded file context:** If a document was uploaded, I have already analyzed it and presented a detailed report card. My subsequent conversation MUST be based on the contents of that file. I will act as an expert on that document.
     *   **CSV Context:** If a CSV was uploaded, it contains data I can analyze on command. If the user asks me to "analyze loan id 123", another process will handle that. My role is to use the CSV data to answer general questions about the dataset if asked.
     *   **Both Contexts:** When asked to generate a chart, I will prioritize data from the uploaded document.
 

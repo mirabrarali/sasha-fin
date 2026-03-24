@@ -7,7 +7,7 @@
  */
 
 import { getLLM } from '@/ai/langchain';
-import { extractTextFromPDF, cleanPDFText } from '@/lib/pdf-extractor';
+import { extractTextFromFile, cleanText } from '@/lib/pdf-extractor';
 import { StructuredOutputParser } from '@langchain/core/output_parsers';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { z } from 'zod';
@@ -18,7 +18,7 @@ const AnalyzeFinancialStatementInputSchema = z.object({
   pdfDataUri: z
     .string()
     .describe(
-      "A company's financial statement in PDF format, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:application/pdf;base64,<encoded_data>'."
+      "Financial data as a data URI with MIME type and Base64 encoding. Supported: application/pdf, text/csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet. Example: 'data:application/pdf;base64,...' or 'data:text/csv;base64,...'."
     ),
   language: z.enum(['en', 'ar']).default('en').describe('The language for the response, either English (en) or Arabic (ar).'),
 });
@@ -66,18 +66,22 @@ Your goal is to be surgically precise, focusing exclusively on the financial dat
 
 export async function analyzeFinancialStatement(input: AnalyzeFinancialStatementInput): Promise<AnalyzeFinancialStatementOutput> {
   try {
-    // Step 1: Extract text from PDF with timeout
-    console.log('Extracting text from PDF...');
-    const { text, numPages } = await withFileOperationTimeout(
-      extractTextFromPDF(input.pdfDataUri),
+    // Step 1: Extract text from PDF, CSV, or XLSX with timeout
+    console.log('Extracting text from uploaded document...');
+    const { text, type, metadata } = await withFileOperationTimeout(
+      extractTextFromFile(input.pdfDataUri),
       TIMEOUTS.PDF_EXTRACTION
     );
-    const cleanedText = cleanPDFText(text);
+    const cleanedText = cleanText(text);
+    const numPages = metadata?.numPages ?? 0;
 
-    console.log(`Extracted ${cleanedText.length} characters from ${numPages} pages`);
+    console.log(`Extracted ${cleanedText.length} characters from ${type} file${numPages ? ` (${numPages} pages)` : ''}`);
 
-    if (!cleanedText || cleanedText.length < 100) {
-      throw new Error('Insufficient text extracted from PDF. Please ensure the PDF contains readable text.');
+    const minChars = type === 'csv' || type === 'xlsx' ? 20 : 100;
+    if (!cleanedText || cleanedText.length < minChars) {
+      throw new Error(
+        'Insufficient text extracted from the file. For PDFs, ensure the document has selectable text. For spreadsheets, ensure the file is not empty.'
+      );
     }
 
     // Step 2: Set up structured output parser

@@ -31,8 +31,12 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { ChatbotStatus } from '@/components/abdullah-status';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
-import { FILE_SIZE_LIMITS } from '@/lib/constants';
 import { saveChatHistory, loadChatHistory, clearChatHistory } from '@/lib/storage-utils';
+import {
+  CHAT_UPLOAD_DRAG_MIMES,
+  getMaxSizeForChatUpload,
+  isChatFinancialUpload,
+} from '@/lib/chat-upload-utils';
 
 const generateAndDownloadPdf = async (element: HTMLElement, fileName: string) => {
     try {
@@ -107,9 +111,12 @@ export default function ChatPageClient() {
     e.stopPropagation();
     setIsDragging(true);
     const items = e.dataTransfer?.items;
-    if (items && items.length > 0) {
+    if (items && items.length > 0 && items[0].kind === 'file') {
       const fileType = items[0].type;
-      setIsDragValid(fileType === 'application/pdf');
+      // Browsers often omit MIME for CSV; allow drop and validate on drop
+      setIsDragValid(!fileType || CHAT_UPLOAD_DRAG_MIMES.has(fileType));
+    } else {
+      setIsDragValid(true);
     }
   };
 
@@ -132,13 +139,13 @@ export default function ChatPageClient() {
     const files = e.dataTransfer?.files;
     if (files && files.length > 0) {
       const file = files[0];
-      if (file.type === 'application/pdf') {
-        handlePdfUpload({ target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>);
+      if (isChatFinancialUpload(file)) {
+        handleFinancialFileUpload({ target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>);
       } else {
         toast({
             variant: 'destructive',
             title: t('daUnsupportedFileType'),
-            description: t('daDragDropUnsupportedPdf'),
+            description: t('chatInvalidFinancialFileDesc'),
         });
       }
     }
@@ -261,25 +268,25 @@ export default function ChatPageClient() {
     }
   };
 
-  const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFinancialFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;
     }
 
-    // Validate file type
-    if (file.type !== 'application/pdf') {
+    if (!isChatFinancialUpload(file)) {
       toast({
         variant: 'destructive',
         title: t('invalidPdfTitle'),
-        description: t('invalidPdfDesc'),
+        description: t('chatInvalidFinancialFileDesc'),
       });
+      if (event.target) event.target.value = '';
       return;
     }
 
-    // Validate file size
-    if (file.size > FILE_SIZE_LIMITS.PDF) {
-      const maxSizeMB = FILE_SIZE_LIMITS.PDF / (1024 * 1024);
+    const maxSize = getMaxSizeForChatUpload(file);
+    if (file.size > maxSize) {
+      const maxSizeMB = maxSize / (1024 * 1024);
       toast({
         variant: 'destructive',
         title: t('fileTooLargeTitle') || 'File Too Large',
@@ -321,7 +328,7 @@ export default function ChatPageClient() {
         setMessages(prev => [...prev, reportMessage]);
 
       } catch (error) {
-        console.error("PDF Analysis failed:", error);
+        console.error('Financial document analysis failed:', error);
         toast({
           variant: 'destructive',
           title: t('analysisFailedTitle'),
@@ -639,7 +646,13 @@ export default function ChatPageClient() {
                           rows={1}
                           />
                           <div className="absolute top-1/2 right-2 sm:right-3 transform -translate-y-1/2 flex items-center space-x-0.5 sm:space-x-1">
-                            <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} accept="application/pdf" className="hidden" />
+                            <input
+                              type="file"
+                              ref={pdfInputRef}
+                              onChange={handleFinancialFileUpload}
+                              accept=".pdf,.csv,.xlsx,.xls,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                              className="hidden"
+                            />
                             <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>
@@ -711,7 +724,7 @@ export default function ChatPageClient() {
                         <p className={cn("text-lg font-semibold", isDragValid ? "text-primary" : "text-destructive")}>
                             {isDragValid ? t('daDragDropValid') : t('daDragDropInvalid')}
                         </p>
-                        <p className="text-sm text-muted-foreground">{t('daDragDropSupportedPdf')}</p>
+                        <p className="text-sm text-muted-foreground">{t('chatDragDropSupported')}</p>
                     </div>
                 </div>
             )}
