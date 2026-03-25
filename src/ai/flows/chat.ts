@@ -8,8 +8,12 @@
 
 import { getChatLLM } from '@/ai/langchain';
 import { extractTextFromFile, cleanText } from '@/lib/pdf-extractor';
-import { StructuredOutputParser } from '@langchain/core/output_parsers';
 import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages';
+import {
+  structuredParserFromZod,
+  toLlmText,
+  type LooseStructuredParser,
+} from '@/lib/langchain-output-utils';
 import { z } from 'zod';
 import { getKnowledge } from '@/actions/knowledge-base-actions';
 import { loanDataCsv } from '@/data/loan_data';
@@ -57,37 +61,9 @@ const ChatOutputSchema = z.object({
 });
 export type ChatOutput = z.infer<typeof ChatOutputSchema>;
 
-function toLlmText(content: unknown): string {
-  if (typeof content === 'string') return content;
-  if (Array.isArray(content)) {
-    return content
-      .map((part) => {
-        if (part && typeof part === 'object' && 'text' in part) {
-          return String((part as { text: unknown }).text);
-        }
-        return '';
-      })
-      .join('');
-  }
-  return content == null ? '' : String(content);
-}
-
-/**
- * LangChain `fromZodSchema` + nested Zod can exceed TS recursion depth on `next build` (Vercel).
- * Call through `(schema: unknown) => ...` so the schema is not linked to deep generic inference.
- */
-type ChatOutputParserApi = {
-  parse(text: string): Promise<unknown>;
-  getFormatInstructions(): string;
-};
-
-const structuredParserFromZod = StructuredOutputParser.fromZodSchema as (
-  schema: unknown
-) => ChatOutputParserApi;
-
 async function resolveChatOutput(
   rawResponse: string,
-  parser: Pick<ChatOutputParserApi, 'parse'>
+  parser: Pick<LooseStructuredParser, 'parse'>
 ): Promise<ChatOutput> {
   const text = rawResponse.trim();
   if (!text) {
