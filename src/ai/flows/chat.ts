@@ -7,7 +7,7 @@
  */
 
 import { getChatLLM } from '@/ai/langchain';
-import { extractTextFromFile, cleanText } from '@/lib/pdf-extractor';
+import { buildDocumentContextForChat } from '@/lib/document-chat-context';
 import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages';
 import {
   structuredParserFromZod,
@@ -17,7 +17,7 @@ import {
 import { z } from 'zod';
 import { getKnowledge } from '@/actions/knowledge-base-actions';
 import { loanDataCsv } from '@/data/loan_data';
-import { CONTEXT_LIMITS, RETRY_CONFIG } from '@/lib/constants';
+import { RETRY_CONFIG } from '@/lib/constants';
 import { withLLMTimeout } from '@/lib/timeout-utils';
 
 const MessageSchema = z.object({
@@ -32,7 +32,7 @@ const ChatInputSchema = z.object({
     .nullable()
     .optional()
     .describe(
-      'An uploaded document (PDF, CSV, or XLSX) as a data URI for conversation context.'
+      'An uploaded document (PDF, spreadsheets, CSV/TSV, JRN, JSON, text, etc.) as a data URI for conversation context.'
     ),
   language: z
     .enum(['en', 'ar'])
@@ -119,13 +119,12 @@ export async function chat(input: ChatInput): Promise<ChatOutput> {
 
     if (input.pdfDataUri) {
       try {
-        console.log('Extracting uploaded document context for chat...');
-        const { text } = await extractTextFromFile(input.pdfDataUri);
-        const cleanedText = cleanText(text);
+        console.log('Building uploaded document context for chat (structured spreadsheet or PDF text)...');
+        const documentBlock = await buildDocumentContextForChat(input.pdfDataUri);
         contextText = `The user has ALREADY uploaded a financial document (PDF, spreadsheet, or CSV). I have ALREADY analyzed it and provided a report card. For the rest of the conversation, this document is the primary context. Answer questions based on its content, and if asked to create a chart or graph, use the data from this document.
 
 Document content:
-${cleanedText.slice(0, CONTEXT_LIMITS.CHAT_PDF)}`; // Limit to configured chars for context
+${documentBlock}`;
       } catch (error) {
         console.error('Failed to extract uploaded file for chat context:', error);
         contextText =
@@ -156,6 +155,7 @@ ${knowledgeBase || 'No custom instructions provided.'}
 - **Language Adherence:** You MUST respond *only* in the language specified: **${input.language === 'ar' ? 'Arabic' : 'English'}**. Do not switch languages.
 - **Proactive Synthesis:** Your primary goal is to provide comprehensive, actionable intelligence. Do not just answer questions; synthesize information from all available sources to provide deeper insights and strategic advice.
 - **Chart Generation:** If the user asks for a chart, graph, or any kind of data visualization, you MUST populate the 'chart' field in the output. Analyze the available data from uploaded documents (PDFs, CSVs) to create a meaningful chart. Extract the necessary labels and data points. Create a clear title for the chart. If the data is not available, inform the user that you cannot create the chart.
+- **Spreadsheet / CSV precision:** When the document includes a **GROUND TRUTH** section (SheetJS parse), treat the stated **data row count**, **column names**, and **JSON/CSV samples** as authoritative. Do not guess counts or invent rows; if the user asks for all names and the sample is partial, say how many rows exist and list what appears in the provided excerpt.
 
 **Knowledge & Interaction Hierarchy:**
 1.  **Primacy of Uploaded Documents:** The user may have uploaded a PDF, CSV, or Excel spreadsheet (e.g., financial statements or tabular data).

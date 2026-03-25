@@ -1,6 +1,8 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
+  /** Keep PDF stack out of client bundles when server actions are referenced from the client. */
+  serverExternalPackages: ['unpdf'],
   productionBrowserSourceMaps: false,
   images: {
     remotePatterns: [

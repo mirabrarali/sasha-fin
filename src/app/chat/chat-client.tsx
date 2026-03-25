@@ -33,9 +33,11 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { saveChatHistory, loadChatHistory, clearChatHistory } from '@/lib/storage-utils';
 import {
+  CHAT_FILE_INPUT_ACCEPT,
   CHAT_UPLOAD_DRAG_MIMES,
   getMaxSizeForChatUpload,
   isChatFinancialUpload,
+  isLikelySupportedDragMime,
 } from '@/lib/chat-upload-utils';
 
 const generateAndDownloadPdf = async (element: HTMLElement, fileName: string) => {
@@ -114,7 +116,7 @@ export default function ChatPageClient() {
     if (items && items.length > 0 && items[0].kind === 'file') {
       const fileType = items[0].type;
       // Browsers often omit MIME for CSV; allow drop and validate on drop
-      setIsDragValid(!fileType || CHAT_UPLOAD_DRAG_MIMES.has(fileType));
+      setIsDragValid(!fileType || CHAT_UPLOAD_DRAG_MIMES.has(fileType) || isLikelySupportedDragMime(fileType));
     } else {
       setIsDragValid(true);
     }
@@ -650,7 +652,7 @@ export default function ChatPageClient() {
                               type="file"
                               ref={pdfInputRef}
                               onChange={handleFinancialFileUpload}
-                              accept=".pdf,.csv,.xlsx,.xls,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                              accept={CHAT_FILE_INPUT_ACCEPT}
                               className="hidden"
                             />
                             <TooltipProvider>

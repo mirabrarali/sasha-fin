@@ -1,8 +1,9 @@
 /**
- * File text extraction for PDF, CSV, and Excel.
- * PDF uses `unpdf` loaded only inside the PDF branch (dynamic import) so Vercel serverless
- * never pulls `pdf-parse` / PDF.js canvas / DOMMatrix into the bundle.
+ * File text extraction for PDF, spreadsheets, and plain-text formats (CSV, JRN, JSON, etc.).
+ * PDF uses a dynamic `unpdf` import so Vercel serverless does not load canvas-based PDF stacks.
  */
+
+import 'server-only';
 
 import * as XLSX from 'xlsx';
 
@@ -12,7 +13,23 @@ export interface FileExtractionResult {
     metadata?: { numPages?: number; info?: Record<string, unknown> };
 }
 
-function isPdfSignature(buf: Buffer): boolean {
+/** Decode a browser FileReader data URI into buffer + normalized MIME (base type, no charset). */
+export function parseDataUriToBuffer(dataUri: string): {
+    mimeTypeRaw: string;
+    mimeBase: string;
+    buffer: Buffer;
+} {
+    const match = dataUri.match(/^data:([^,]*);base64,([\s\S]*)$/);
+    if (!match) {
+        throw new Error('Invalid data URI format');
+    }
+    const mimeTypeRaw = (match[1] ?? '').trim().toLowerCase();
+    const mimeBase = mimeTypeRaw.split(';')[0].trim();
+    const buffer = Buffer.from(match[2], 'base64');
+    return { mimeTypeRaw, mimeBase, buffer };
+}
+
+export function isPdfSignature(buf: Buffer): boolean {
     return buf.length >= 5 && buf.subarray(0, 5).toString('ascii') === '%PDF-';
 }
 
@@ -39,30 +56,34 @@ function bufferLooksLikeTextCsv(buf: Buffer): boolean {
     return true;
 }
 
+function workbookToDelimitedText(workbook: XLSX.WorkBook): string {
+    let text = '';
+    for (const sheetName of workbook.SheetNames) {
+        const worksheet = workbook.Sheets[sheetName];
+        if (!worksheet) continue;
+        text += `Sheet: ${sheetName}\n`;
+        text += XLSX.utils.sheet_to_csv(worksheet, { FS: ',', blankrows: false });
+        text += '\n\n';
+    }
+    return text.trim();
+}
+
 function tryExtractSpreadsheet(buffer: Buffer): string | null {
     try {
         const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true, raw: false });
         if (!workbook.SheetNames?.length) return null;
-        let text = '';
-        for (const sheetName of workbook.SheetNames) {
-            const worksheet = workbook.Sheets[sheetName];
-            if (!worksheet) continue;
-            text += `Sheet: ${sheetName}\n`;
-            text += XLSX.utils.sheet_to_csv(worksheet);
-            text += '\n\n';
-        }
-        return text.trim().length > 0 ? text : null;
+        const t = workbookToDelimitedText(workbook);
+        return t.length > 0 ? t : null;
     } catch {
         return null;
     }
 }
 
-/** Dynamic import keeps `unpdf` (and its PDF.js build) out of the module graph until a PDF is parsed. */
 async function extractPdfWithUnpdf(buffer: Buffer): Promise<FileExtractionResult> {
-    const { extractText, getMeta } = await import('unpdf');
+    // Server-only: do not let the client flight bundler resolve `unpdf` (see generate-dashboard trace).
+    const { extractText, getMeta } = await import(/* webpackIgnore: true */ 'unpdf');
     const data = new Uint8Array(buffer);
     const result = await extractText(data, { mergePages: true });
-    // Types say `mergePages: true` ⇒ string; widen so array handling stays valid at runtime.
     const raw = result.text as string | string[];
     const text = Array.isArray(raw) ? raw.join('\n') : raw;
     let info: Record<string, unknown> = {};
@@ -79,45 +100,70 @@ async function extractPdfWithUnpdf(buffer: Buffer): Promise<FileExtractionResult
     };
 }
 
-/**
- * Extracts text from a base64 data URI (PDF, CSV, XLSX, etc.).
- */
-export async function extractTextFromFile(base64DataUri: string): Promise<FileExtractionResult> {
-    const match = base64DataUri.match(/^data:([^,]*);base64,([\s\S]*)$/);
-    if (!match) {
-        throw new Error('Invalid data URI format');
-    }
+/** Used by structured chat context; same extraction path as PDF in `extractTextFromFile`. */
+export async function extractPdfText(buffer: Buffer): Promise<{
+    text: string;
+    numpages: number;
+    info: Record<string, unknown>;
+}> {
+    const r = await extractPdfWithUnpdf(buffer);
+    return {
+        text: r.text,
+        numpages: r.metadata?.numPages ?? 0,
+        info: r.metadata?.info ?? {},
+    };
+}
 
-    const mimeTypeRaw = (match[1] ?? '').trim().toLowerCase();
-    const mimeBase = mimeTypeRaw.split(';')[0].trim();
-    const buffer = Buffer.from(match[2], 'base64');
+export async function extractTextFromFile(base64DataUri: string): Promise<FileExtractionResult> {
+    const { mimeTypeRaw, mimeBase, buffer } = parseDataUriToBuffer(base64DataUri);
 
     try {
         if (mimeBase === 'application/pdf' || isPdfSignature(buffer)) {
             return await extractPdfWithUnpdf(buffer);
         }
 
-        if (mimeBase === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+        if (mimeBase === 'application/vnd.oasis.opendocument.spreadsheet') {
             const sheetText = tryExtractSpreadsheet(buffer);
             if (sheetText) {
-                return { text: sheetText, type: 'xlsx' };
+                return { text: sheetText, type: 'ods' };
             }
-            throw new Error('Could not read Excel workbook (.xlsx).');
+            throw new Error('Could not read ODS spreadsheet.');
         }
 
-        if (mimeBase === 'application/vnd.ms-excel') {
+        if (
+            mimeBase === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+            mimeBase === 'application/vnd.ms-excel' ||
+            mimeBase === 'application/vnd.ms-excel.sheet.macroenabled.12'
+        ) {
             const sheetText = tryExtractSpreadsheet(buffer);
             if (sheetText) {
-                return { text: sheetText, type: 'xls' };
+                const type = mimeBase.includes('macroenabled') ? 'xlsm' : mimeBase.includes('openxml') ? 'xlsx' : 'xls';
+                return { text: sheetText, type };
             }
-            if (bufferLooksLikeTextCsv(buffer)) {
+            if (mimeBase === 'application/vnd.ms-excel' && bufferLooksLikeTextCsv(buffer)) {
                 return { text: buffer.toString('utf-8'), type: 'csv' };
             }
-            throw new Error('Could not read Excel (.xls) or CSV from this file.');
+            throw new Error('Could not read spreadsheet file.');
         }
 
-        if (mimeBase === 'text/csv' || mimeBase === 'application/csv' || mimeBase === 'text/plain') {
-            return { text: buffer.toString('utf-8'), type: 'csv' };
+        if (
+            mimeBase === 'text/csv' ||
+            mimeBase === 'application/csv' ||
+            mimeBase === 'text/tab-separated-values' ||
+            mimeBase === 'text/plain' ||
+            mimeBase === 'application/json' ||
+            mimeBase === 'application/xml' ||
+            mimeBase === 'text/xml' ||
+            mimeBase === 'text/html'
+        ) {
+            const body = buffer.toString('utf-8');
+            const type =
+                mimeBase === 'application/json'
+                    ? 'json'
+                    : mimeBase === 'text/csv' || mimeBase === 'application/csv' || mimeBase === 'text/tab-separated-values'
+                      ? 'csv'
+                      : 'text';
+            return { text: body, type };
         }
 
         if (mimeBase === 'application/octet-stream' || !mimeTypeRaw) {
@@ -177,4 +223,12 @@ export async function extractTextFromPDF(base64PDF: string) {
 
 export function cleanPDFText(text: string): string {
     return cleanText(text);
+}
+
+export function cleanTextForPdfChat(text: string): string {
+    return text
+        .replace(/\r\n?/g, '\n')
+        .replace(/\u00a0/g, ' ')
+        .replace(/\n{5,}/g, '\n\n\n\n')
+        .trim();
 }

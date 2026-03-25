@@ -17,7 +17,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     pageTitle: 'Sohar International Bank Chat assistant',
     initialMessage: "Hi, I am your Sohar international chat assistant how can I help you today",
     placeholder: "Ask about loan data or upload PDF, CSV, or Excel...",
-    uploadPdfTooltip: "Upload PDF, CSV, or Excel",
+    uploadPdfTooltip: "Upload documents (PDF, Excel, CSV, JRN, JSON, text, …)",
     sendSr: "Send",
     analyzingFile: "Context: {{fileName}}",
     clearPdfTooltip: "Remove uploaded file from session",
@@ -152,13 +152,14 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     fileTooLargeTitle: "File Too Large",
     fileTooLargeDesc: "File size exceeds {{maxSize}}MB limit. Please upload a smaller file.",
     chatDragDropSupported: "Supported: PDF, CSV, XLSX, XLS",
-    chatInvalidFinancialFileDesc: "Please drop a PDF, CSV, or Excel file (.pdf, .csv, .xlsx, .xls).",
+    chatInvalidFinancialFileDesc:
+      "Please drop a supported file: PDF, Excel (.xlsx, .xls, .xlsm, .ods), CSV/TSV, journal (.jrn), or text/data (.txt, .json, .xml, .yaml, …).",
   },
   ar: {
     pageTitle: 'مساعد الدردشة من بنك صحار الدولي',
     initialMessage: "مرحباً، أنا مساعد الدردشة الخاص بك من بنك صحار الدولي، كيف يمكنني مساعدتك اليوم؟",
     placeholder: "اسأل عن بيانات القروض أو حمّل PDF أو CSV أو Excel...",
-    uploadPdfTooltip: "تحميل PDF أو CSV أو Excel",
+    uploadPdfTooltip: "تحميل مستندات (PDF، Excel، CSV، JRN، JSON، نص، …)",
     sendSr: "إرسال",
     analyzingFile: "السياق: {{fileName}}",
     clearPdfTooltip: "إزالة الملف المحمّل من الجلسة",
@@ -293,7 +294,8 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     fileTooLargeTitle: "الملف كبير جداً",
     fileTooLargeDesc: "يتجاوز حجم الملف حد {{maxSize}} ميجابايت. يرجى تحميل ملف أصغر.",
     chatDragDropSupported: "المدعومة: PDF، CSV، XLSX، XLS",
-    chatInvalidFinancialFileDesc: "يرجى إفلات ملف PDF أو CSV أو Excel (.pdf أو .csv أو .xlsx أو .xls).",
+    chatInvalidFinancialFileDesc:
+      "يرجى إفلات ملف مدعوم: PDF أو Excel (.xlsx أو .xls أو .xlsm أو .ods) أو CSV/TSV أو دفتر (.jrn) أو نص/بيانات (.txt أو .json أو .xml أو .yaml، …).",
   },
 };
 

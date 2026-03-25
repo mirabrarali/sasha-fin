@@ -13,9 +13,18 @@ export const FILE_SIZE_LIMITS = {
 
 // Context/Text Limits (in characters)
 export const CONTEXT_LIMITS = {
-    CHAT_PDF: 30000, // 30k chars for chat PDF context
+    /** Max chars of PDF text injected into chat (unpdf extract; avoid aggressive whitespace stripping) */
+    CHAT_PDF: 50000,
+    /** Hard cap for entire chat document block (PDF or spreadsheet pack) */
+    CHAT_DOCUMENT_MAX: 120000,
+    /** Max CSV chars per sheet inside structured chat context */
+    CHAT_TABULAR_CSV_PER_SHEET: 55000,
+    /** Records shown as JSON at start / end of each sheet for precise Q&A */
+    CHAT_TABULAR_JSON_FIRST: 45,
+    CHAT_TABULAR_JSON_LAST: 20,
     FINANCIAL_STATEMENT: 50000, // 50k chars for financial analysis
     DASHBOARD: 40000, // 40k chars for dashboard generation
+    SPREADSHEET: 16000, // excerpt sent with agentic cells / range analysis
 } as const;
 
 // Retry Configuration
