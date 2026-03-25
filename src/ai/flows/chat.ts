@@ -9,7 +9,6 @@
 import { getChatLLM } from '@/ai/langchain';
 import { extractTextFromFile, cleanText } from '@/lib/pdf-extractor';
 import { StructuredOutputParser } from '@langchain/core/output_parsers';
-import { PromptTemplate } from '@langchain/core/prompts';
 import { HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages';
 import { z } from 'zod';
 import { getKnowledge } from '@/actions/knowledge-base-actions';
@@ -57,6 +56,65 @@ const ChatOutputSchema = z.object({
   }).optional().describe("An optional chart to be displayed to the user if their query asks for a visualization."),
 });
 export type ChatOutput = z.infer<typeof ChatOutputSchema>;
+
+function toLlmText(content: unknown): string {
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (part && typeof part === 'object' && 'text' in part) {
+          return String((part as { text: unknown }).text);
+        }
+        return '';
+      })
+      .join('');
+  }
+  return content == null ? '' : String(content);
+}
+
+/**
+ * LangChain `fromZodSchema` + nested Zod can exceed TS recursion depth on `next build` (Vercel).
+ * Call through `(schema: unknown) => ...` so the schema is not linked to deep generic inference.
+ */
+type ChatOutputParserApi = {
+  parse(text: string): Promise<unknown>;
+  getFormatInstructions(): string;
+};
+
+const structuredParserFromZod = StructuredOutputParser.fromZodSchema as (
+  schema: unknown
+) => ChatOutputParserApi;
+
+async function resolveChatOutput(
+  rawResponse: string,
+  parser: Pick<ChatOutputParserApi, 'parse'>
+): Promise<ChatOutput> {
+  const text = rawResponse.trim();
+  if (!text) {
+    throw new Error('Empty model response');
+  }
+
+  try {
+    const parsed = (await parser.parse(text)) as ChatOutput;
+    if (parsed?.content?.trim()) return parsed;
+  } catch {
+    // fall through
+  }
+
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const jsonCandidate = (fence ? fence[1] : text).trim();
+  try {
+    const data = JSON.parse(jsonCandidate) as unknown;
+    const checked = ChatOutputSchema.safeParse(data);
+    if (checked.success && checked.data.content.trim()) {
+      return checked.data;
+    }
+  } catch {
+    // not JSON
+  }
+
+  return { content: text };
+}
 
 export async function chat(input: ChatInput): Promise<ChatOutput> {
   try {
@@ -144,8 +202,7 @@ ${contextText}
 
 {format_instructions}`;
 
-    // Set up structured output parser
-    const parser = StructuredOutputParser.fromZodSchema(ChatOutputSchema);
+    const parser = structuredParserFromZod(ChatOutputSchema);
     const formatInstructions = parser.getFormatInstructions();
 
     // Retry logic for handling intermittent API failures
@@ -166,10 +223,9 @@ ${contextText}
         const chatLLM = getChatLLM();
         const response = await withLLMTimeout(chatLLM.invoke(fullMessages));
 
-        // Parse structured output
-        const result = await parser.parse(response.content as string);
+        const result = await resolveChatOutput(toLlmText(response.content), parser);
 
-        if (result && result.content) {
+        if (result?.content?.trim()) {
           console.log('Chat completed successfully');
           return result;
         }
