@@ -49,7 +49,8 @@ export function getLLM(): ChatGroq {
         _llm = createLLM({
             model: 'llama-3.3-70b-versatile',
             temperature: 0.1, // Low temperature for consistent, factual responses
-            maxTokens: 8000,
+            // Keep output budget moderate to avoid Groq TPM "request too large" on big uploads.
+            maxTokens: 1800,
         });
     }
     return _llm;

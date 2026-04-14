@@ -14,6 +14,11 @@ import { CONTEXT_LIMITS, TIMEOUTS } from '@/lib/constants';
 import { withLLMTimeout, withFileOperationTimeout } from '@/lib/timeout-utils';
 import { structuredParserFromZod, toLlmText } from '@/lib/langchain-output-utils';
 
+const GROQ_TPM_LIMIT = 12_000;
+const GROQ_OUTPUT_TOKEN_BUDGET = 1_600;
+const SAFETY_PROMPT_TOKENS = 1_700;
+const CHARS_PER_TOKEN_ESTIMATE = 3.5;
+
 const AnalyzeFinancialStatementInputSchema = z.object({
   pdfDataUri: z
     .string()
@@ -159,6 +164,76 @@ Your goal is to be surgically precise, focusing exclusively on the financial dat
 
 {format_instructions}`;
 
+function estimateTokensFromChars(chars: number): number {
+  return Math.ceil(chars / CHARS_PER_TOKEN_ESTIMATE);
+}
+
+function buildCompactDocumentText(raw: string, type: string, maxChars: number): string {
+  const text = raw.trim();
+  if (text.length <= maxChars) return text;
+
+  const isTabular =
+    type === 'csv' ||
+    type === 'xlsx' ||
+    type === 'xls' ||
+    type === 'xlsm' ||
+    type === 'ods' ||
+    type === 'spreadsheet';
+
+  if (!isTabular) {
+    return text.slice(0, maxChars);
+  }
+
+  const lines = text.split('\n');
+  if (lines.length <= 2) {
+    return text.slice(0, maxChars);
+  }
+
+  const header = lines[0] ?? '';
+  const dataLines = lines.slice(1).filter((line) => line.trim().length > 0);
+  const budget = Math.max(2_000, maxChars - header.length - 200);
+  const firstTarget = Math.floor(budget * 0.72);
+  const lastTarget = Math.floor(budget * 0.20);
+
+  const takeFromStart: string[] = [];
+  let used = 0;
+  for (const line of dataLines) {
+    if (used + line.length + 1 > firstTarget) break;
+    takeFromStart.push(line);
+    used += line.length + 1;
+  }
+
+  const takeFromEnd: string[] = [];
+  used = 0;
+  for (let i = dataLines.length - 1; i >= takeFromStart.length; i--) {
+    const line = dataLines[i]!;
+    if (used + line.length + 1 > lastTarget) break;
+    takeFromEnd.unshift(line);
+    used += line.length + 1;
+  }
+
+  const omittedRows = Math.max(0, dataLines.length - takeFromStart.length - takeFromEnd.length);
+  const middleNote =
+    omittedRows > 0
+      ? `...[${omittedRows} tabular row(s) omitted to stay under model token budget]...`
+      : '';
+
+  return [header, ...takeFromStart, middleNote, ...takeFromEnd]
+    .filter(Boolean)
+    .join('\n')
+    .slice(0, maxChars);
+}
+
+function isRequestTooLargeError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return (
+    message.includes('Request too large') ||
+    message.includes('rate_limit_exceeded') ||
+    message.includes('tokens per minute') ||
+    message.includes('"code":"rate_limit_exceeded"')
+  );
+}
+
 export async function analyzeFinancialStatement(
   input: AnalyzeFinancialStatementInput
 ): Promise<AnalyzeFinancialStatementOutput> {
@@ -192,16 +267,57 @@ export async function analyzeFinancialStatement(
       partialVariables: { format_instructions: formatInstructions },
     });
 
-    const prompt = await promptTemplate.format({
-      language: input.language === 'ar' ? 'Arabic' : 'English',
-      documentText: cleanedText.slice(0, CONTEXT_LIMITS.FINANCIAL_STATEMENT),
-    });
+    const staticPromptPart = SYSTEM_PROMPT.replace('{format_instructions}', formatInstructions);
+    const staticPromptTokens = estimateTokensFromChars(staticPromptPart.length);
+    const availableInputTokens = Math.max(
+      1_500,
+      GROQ_TPM_LIMIT - GROQ_OUTPUT_TOKEN_BUDGET - SAFETY_PROMPT_TOKENS - staticPromptTokens
+    );
+    const primaryDocCharBudget = Math.max(
+      8_000,
+      Math.min(
+        CONTEXT_LIMITS.FINANCIAL_STATEMENT,
+        Math.floor(availableInputTokens * CHARS_PER_TOKEN_ESTIMATE)
+      )
+    );
+    const fallbackDocCharBudget = Math.max(4_000, Math.floor(primaryDocCharBudget * 0.55));
+    const docCandidates = [primaryDocCharBudget, fallbackDocCharBudget];
 
-    console.log('Analyzing financial statement with LLM...');
-    const llm = getLLM();
-    const response = await withLLMTimeout(llm.invoke(prompt), TIMEOUTS.LLM_CHAT);
+    let lastAttemptError: unknown;
+    let result: AnalyzeFinancialStatementOutput | null = null;
+    for (let i = 0; i < docCandidates.length; i++) {
+      const docBudget = docCandidates[i]!;
+      const documentText = buildCompactDocumentText(cleanedText, type, docBudget);
+      const prompt = await promptTemplate.format({
+        language: input.language === 'ar' ? 'Arabic' : 'English',
+        documentText,
+      });
 
-    const result = await resolveFinancialAnalysisOutput(response.content, parser);
+      const estimatedPromptTokens = estimateTokensFromChars(prompt.length);
+      console.log(
+        `Analyzing financial statement with LLM... attempt ${i + 1}/${docCandidates.length} (doc chars=${documentText.length}, est prompt tokens=${estimatedPromptTokens})`
+      );
+
+      try {
+        const llm = getLLM();
+        const response = await withLLMTimeout(llm.invoke(prompt), TIMEOUTS.LLM_CHAT);
+        result = await resolveFinancialAnalysisOutput(response.content, parser);
+        break;
+      } catch (error) {
+        lastAttemptError = error;
+        if (i < docCandidates.length - 1 && isRequestTooLargeError(error)) {
+          console.warn('LLM request exceeded token budget; retrying with smaller compact context...');
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    if (!result) {
+      throw (lastAttemptError instanceof Error
+        ? lastAttemptError
+        : new Error('LLM analysis failed with unknown error'));
+    }
 
     console.log('Financial analysis completed successfully');
     return result;
@@ -212,6 +328,12 @@ export async function analyzeFinancialStatement(
     if (errorMessage.includes('timed out')) {
       throw new Error(
         'Analysis timed out. The document may be too large or complex. Please try a smaller file or try again.'
+      );
+    }
+
+    if (isRequestTooLargeError(error)) {
+      throw new Error(
+        'The uploaded file is too large for a single AI request on the current Groq plan. We now send a compact sample automatically, but this file still exceeded limits. Try a smaller extract or fewer columns.'
       );
     }
 
