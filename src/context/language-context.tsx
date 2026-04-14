@@ -14,8 +14,8 @@ interface LanguageContextType {
 
 const translations: { [key in Language]: { [key: string]: string } } = {
   en: {
-    pageTitle: 'Sohar International Bank Chat assistant',
-    initialMessage: "Hi, I am your Sohar international chat assistant how can I help you today",
+    pageTitle: 'Banking Chatbot',
+    initialMessage: "Hi, I'm your banking assistant. How can I help you today?",
     placeholder: 'Ask about loan data or upload PDF, Excel, CSV, JRN, JSON, text…',
     uploadPdfTooltip: "Upload documents (PDF, Excel, CSV, JRN, JSON, text, …)",
     sendSr: "Send",
@@ -160,8 +160,8 @@ const translations: { [key in Language]: { [key: string]: string } } = {
       "Please drop a supported file: PDF, Excel (.xlsx, .xls, .xlsm, .ods), CSV/TSV, journal (.jrn), or text/data (.txt, .json, .xml, .yaml, …).",
   },
   ar: {
-    pageTitle: 'مساعد الدردشة من بنك صحار الدولي',
-    initialMessage: "مرحباً، أنا مساعد الدردشة الخاص بك من بنك صحار الدولي، كيف يمكنني مساعدتك اليوم؟",
+    pageTitle: 'المساعد المصرفي',
+    initialMessage: 'مرحباً، أنا مساعدك المصرفي. كيف يمكنني مساعدتك اليوم؟',
     placeholder: 'اسأل عن بيانات القروض أو حمّل PDF أو Excel أو CSV أو JRN أو JSON أو نصًا…',
     uploadPdfTooltip: "تحميل مستندات (PDF، Excel، CSV، JRN، JSON، نص، …)",
     sendSr: "إرسال",

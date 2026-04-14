@@ -25,6 +25,7 @@ export type LooseStructuredParser = {
   getFormatInstructions(): string;
 };
 
-export const structuredParserFromZod = StructuredOutputParser.fromZodSchema as (
-  schema: unknown
-) => LooseStructuredParser;
+/** `.bind` fixes Vercel/runtime `TypeError: this is not a constructor` when the method is referenced unbound. */
+export const structuredParserFromZod = StructuredOutputParser.fromZodSchema.bind(
+  StructuredOutputParser
+) as (schema: unknown) => LooseStructuredParser;
