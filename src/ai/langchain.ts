@@ -71,9 +71,10 @@ let _chatLLM: ChatGroq | null = null;
 export function getChatLLM(): ChatGroq {
     if (!_chatLLM) {
         _chatLLM = createLLM({
-            model: 'llama-3.3-70b-versatile',
-            temperature: 0.3,
-            maxTokens: 4000,
+            // Use smaller instant model for lower latency + lower token cost in live chat.
+            model: 'llama-3.1-8b-instant',
+            temperature: 0.25,
+            maxTokens: 900,
         });
     }
     return _chatLLM;
