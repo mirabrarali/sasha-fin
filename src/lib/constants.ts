@@ -35,8 +35,14 @@ export const RETRY_CONFIG = {
 } as const;
 
 // Request Timeouts (in milliseconds)
+const chatTimeoutFromEnv = Number(process.env.LLM_CHAT_TIMEOUT_MS);
+const chatLlmMs =
+    Number.isFinite(chatTimeoutFromEnv) && chatTimeoutFromEnv >= 10_000 ? chatTimeoutFromEnv : 120_000;
+
 export const TIMEOUTS = {
-    LLM_REQUEST: 60000, // 60 seconds for LLM calls
+    LLM_REQUEST: 60000, // 60 seconds — short flows (loan, summarize, etc.)
+    /** Chat often sends large uploads + history; Groq can exceed 60s. Override with LLM_CHAT_TIMEOUT_MS (ms, min 10000). */
+    LLM_CHAT: chatLlmMs,
     PDF_EXTRACTION: 30000, // 30 seconds for PDF extraction
     FILE_UPLOAD: 120000, // 2 minutes for file upload
 } as const;

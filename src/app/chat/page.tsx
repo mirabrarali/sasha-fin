@@ -1,6 +1,8 @@
-
 import type { Metadata } from 'next';
 import ChatPageClient from './chat-client';
+
+/** Allow long Groq calls when chat includes large document context (requires Vercel plan that supports it). */
+export const maxDuration = 120;
 
 export const metadata: Metadata = {
   title: 'Chat with Banking Chatbot',

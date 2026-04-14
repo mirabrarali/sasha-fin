@@ -17,7 +17,7 @@ import {
 import { z } from 'zod';
 import { getKnowledge } from '@/actions/knowledge-base-actions';
 import { loanDataCsv } from '@/data/loan_data';
-import { RETRY_CONFIG } from '@/lib/constants';
+import { RETRY_CONFIG, TIMEOUTS } from '@/lib/constants';
 import { withLLMTimeout } from '@/lib/timeout-utils';
 
 const MessageSchema = z.object({
@@ -197,7 +197,10 @@ ${contextText}
         
         // Invoke LLM with timeout
         const chatLLM = getChatLLM();
-        const response = await withLLMTimeout(chatLLM.invoke(fullMessages));
+        const response = await withLLMTimeout(
+          chatLLM.invoke(fullMessages),
+          TIMEOUTS.LLM_CHAT
+        );
 
         const result = await resolveChatOutput(toLlmText(response.content), parser);
 
