@@ -13,9 +13,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/context/language-context';
 import { BarChart as RechartsBarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { parseStructuredFlaw, splitSummarySections } from '@/lib/financial-report-format';
 
-const FinancialReportChart = dynamic(
-  () => import('./financial-report-chart').then((mod) => mod.FinancialReportChart),
+const FinancialReportCharts = dynamic(
+  () => import('./financial-report-chart').then((mod) => mod.FinancialReportCharts),
   {
     loading: () => (
       <div className="flex h-[386px] w-full items-center justify-center rounded-lg border bg-card p-4">
@@ -43,6 +44,7 @@ export type Message = {
     prediction: string;
     creditScorePrediction: string;
     identifiedFlaws: string[];
+    criticalInsights?: string[];
     keyMetrics: {
       name: string;
       revenue?: number;
@@ -78,7 +80,7 @@ export function MessageList({ messages, isLoading, onDownloadLoanPdf, onDownload
 
   return (
     <ScrollArea className="h-full">
-      <div className="p-4 md:p-6 space-y-6 max-w-3xl mx-auto">
+      <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
         {messages.map((message) => (
           <ChatMessage 
             key={message.id} 
@@ -170,55 +172,112 @@ function ChatMessage({
 
         {message.financialReport && (
           <>
-            <Card className="bg-card text-card-foreground">
-              <CardHeader>
-                <CardTitle className="text-base">{t('financialAnalysisReportTitle')}</CardTitle>
+            <Card className="overflow-hidden border bg-card text-card-foreground shadow-sm">
+              <CardHeader className="border-b bg-muted/30">
+                <CardTitle className="text-lg font-semibold tracking-tight">{t('financialAnalysisReportTitle')}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4 text-sm">
-                <div>
-                  <h3 className="font-semibold mb-1">{t('summary')}</h3>
-                  <p className="text-muted-foreground whitespace-pre-wrap">{message.financialReport.summary}</p>
+              <CardContent className="space-y-6 pt-6 text-sm">
+                <div className="space-y-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('summary')}</h3>
+                  <div className="space-y-3">
+                    {splitSummarySections(message.financialReport.summary).map((sec, idx) => (
+                      <div
+                        key={idx}
+                        className="rounded-xl border bg-muted/20 p-4 shadow-sm break-inside-avoid"
+                      >
+                        <h4 className="text-sm font-semibold text-foreground">{sec.title}</h4>
+                        <p className="mt-2 text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{sec.body}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+
                 {message.financialReport.trendsAndGraphs && (
-                  <div>
-                    <h3 className="font-semibold mb-1">{t('trendsAndGraphsTitle')}</h3>
-                    <p className="text-muted-foreground whitespace-pre-wrap">{message.financialReport.trendsAndGraphs}</p>
+                  <div className="rounded-xl border bg-card p-4 break-inside-avoid">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('trendsAndGraphsTitle')}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
+                      {message.financialReport.trendsAndGraphs}
+                    </p>
                   </div>
                 )}
-                <div>
-                  <h3 className="font-semibold mb-1">{t('prediction')}</h3>
-                  <p className="text-muted-foreground whitespace-pre-wrap">{message.financialReport.prediction}</p>
+
+                {message.financialReport.keyMetrics && message.financialReport.keyMetrics.length > 0 && (
+                  <div className="min-w-0 break-inside-avoid">
+                    <FinancialReportCharts
+                      data={message.financialReport.keyMetrics}
+                      revenueLabel={t('revenue')}
+                      netIncomeLabel={t('netIncome')}
+                      barTitle={t('financialPerformanceTitle')}
+                      pieTitle={t('chartCompositionTitle')}
+                    />
+                  </div>
+                )}
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-xl border bg-card p-4 break-inside-avoid">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('prediction')}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
+                      {message.financialReport.prediction}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border bg-card p-4 break-inside-avoid">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('creditScoreAssessment')}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
+                      {message.financialReport.creditScorePrediction}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold mb-1">{t('creditScoreAssessment')}</h3>
-                  <p className="text-muted-foreground whitespace-pre-wrap">{message.financialReport.creditScorePrediction}</p>
-                </div>
-                {message.financialReport.identifiedFlaws && message.financialReport.identifiedFlaws.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold mb-1">{t('identifiedFlawsTitle')}</h3>
-                    <ul className="list-none space-y-2 pl-0">
-                      {message.financialReport.identifiedFlaws.map((flaw, index) => (
-                        <li key={index} className="flex items-start">
-                          <span className="h-2 w-2 mt-1.5 mr-3 shrink-0 rounded-full bg-red-500"></span>
-                          <span className="text-muted-foreground">{flaw}</span>
-                        </li>
+
+                {(message.financialReport.criticalInsights?.length ?? 0) > 0 && (
+                  <div className="rounded-xl border border-primary/15 bg-primary/5 p-4 break-inside-avoid">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-primary">{t('criticalInsightsTitle')}</h3>
+                    <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-foreground">
+                      {message.financialReport.criticalInsights!.map((line, i) => (
+                        <li key={i}>{line}</li>
                       ))}
                     </ul>
                   </div>
                 )}
-                 <Button onClick={() => onDownloadFinancialReportPdf(message.financialReport)} variant="secondary" size="sm">
+
+                {message.financialReport.identifiedFlaws && message.financialReport.identifiedFlaws.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-destructive">{t('identifiedFlawsTitle')}</h3>
+                    <div className="space-y-3">
+                      {message.financialReport.identifiedFlaws.map((flaw, index) => {
+                        const parsed = parseStructuredFlaw(flaw);
+                        return (
+                          <div
+                            key={index}
+                            className="rounded-xl border border-red-200/80 bg-red-50/40 p-4 dark:border-red-900/40 dark:bg-red-950/20 break-inside-avoid"
+                          >
+                            {parsed.severity && (
+                              <span
+                                className={
+                                  parsed.severity === 'high'
+                                    ? 'mb-2 inline-block rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white'
+                                    : parsed.severity === 'medium'
+                                      ? 'mb-2 inline-block rounded-full bg-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white'
+                                      : 'mb-2 inline-block rounded-full bg-slate-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white'
+                                }
+                              >
+                                {parsed.severity}
+                              </span>
+                            )}
+                            {parsed.headline && <p className="text-sm font-semibold text-foreground">{parsed.headline}</p>}
+                            <p className="mt-1 text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{parsed.body}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <Button onClick={() => onDownloadFinancialReportPdf(message.financialReport)} variant="secondary" size="sm" className="mt-2">
                   <Download className="mr-2 h-4 w-4" />
                   {t('downloadPdf')}
                 </Button>
               </CardContent>
             </Card>
-            {message.financialReport.keyMetrics && message.financialReport.keyMetrics.length > 0 && (
-              <FinancialReportChart 
-                data={message.financialReport.keyMetrics}
-                revenueLabel={t('revenue')}
-                netIncomeLabel={t('netIncome')}
-              />
-            )}
           </>
         )}
       </div>

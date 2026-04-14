@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { MessageList, type Message } from '@/components/chat/message-list';
-import { FinancialReportChart } from '@/components/chat/financial-report-chart';
+import { FinancialReportCharts } from '@/components/chat/financial-report-chart';
 import { ChatbotAvatar } from '@/components/abdullah-avatar';
 import { chat } from '@/ai/flows/chat';
 import { analyzeLoan } from '@/ai/flows/analyze-loan';
@@ -39,46 +39,66 @@ import {
   isChatFinancialUpload,
   isLikelySupportedDragMime,
 } from '@/lib/chat-upload-utils';
+import { parseStructuredFlaw, splitSummarySections } from '@/lib/financial-report-format';
 
 function isStaleServerActionError(e: unknown): boolean {
   const msg = e instanceof Error ? e.message : String(e);
   return /failed to find server action/i.test(msg);
 }
 
+function cropCanvasSlice(source: HTMLCanvasElement, sourceY: number, sourceH: number): HTMLCanvasElement {
+  const out = document.createElement('canvas');
+  out.width = source.width;
+  out.height = Math.max(1, Math.floor(sourceH));
+  const ctx = out.getContext('2d');
+  if (!ctx) return source;
+  ctx.drawImage(source, 0, sourceY, source.width, sourceH, 0, 0, source.width, sourceH);
+  return out;
+}
+
+/** Multi-page PDF with clean page cuts (avoids mid-line splits from a single stretched image). */
 const generateAndDownloadPdf = async (element: HTMLElement, fileName: string) => {
-    try {
-        const { default: jsPDF } = await import('jspdf');
-        const { default: html2canvas } = await import('html2canvas');
+  try {
+    const { default: jsPDF } = await import('jspdf');
+    const { default: html2canvas } = await import('html2canvas');
 
-        const canvas = await html2canvas(element, { useCORS: true, scale: 2 });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const canvasWidth = canvas.width;
-        const canvasHeight = canvas.height;
-        const ratio = canvasWidth / canvasHeight;
-        let imgWidth = pdfWidth - 20; // Add margins
-        let imgHeight = imgWidth / ratio;
-        let heightLeft = imgHeight;
-        let position = 10; // Top margin
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const margin = 12;
+    const contentWidth = pdfWidth - 2 * margin;
+    const contentHeight = pdfHeight - 2 * margin;
 
-        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight); // Left margin
-        heightLeft -= (pdfHeight - 20); // Account for top/bottom margins
+    const canvas = await html2canvas(element, {
+      useCORS: true,
+      scale: 2,
+      logging: false,
+      backgroundColor: '#ffffff',
+      windowWidth: element.scrollWidth,
+    });
 
-        while (heightLeft > 0) {
-            position = heightLeft - imgHeight + 10; // Adjust position for new page
-            pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-            heightLeft -= (pdfHeight - 20);
-        }
-        
-        pdf.save(fileName);
-        return true;
-    } catch (err) {
-        console.error(err);
-        return false;
+    const imgHeightMm = (canvas.height / canvas.width) * contentWidth;
+    let offsetMm = 0;
+    let page = 0;
+
+    while (offsetMm < imgHeightMm - 0.05) {
+      if (page > 0) pdf.addPage();
+      const sliceMm = Math.min(contentHeight, imgHeightMm - offsetMm);
+      const sourceY = (offsetMm / imgHeightMm) * canvas.height;
+      const sourceH = (sliceMm / imgHeightMm) * canvas.height;
+      const sliceCanvas = cropCanvasSlice(canvas, sourceY, sourceH);
+      const imgData = sliceCanvas.toDataURL('image/png', 1.0);
+      pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, sliceMm);
+      offsetMm += sliceMm;
+      page += 1;
     }
+
+    pdf.save(fileName);
+    return true;
+  } catch (err) {
+    console.error(err);
+    return false;
+  }
 };
 
 type ReportToDownload = NonNullable<Message['analysisReport'] | Message['financialReport']>;
@@ -214,7 +234,7 @@ export default function ChatPageClient() {
             setDownloadInfo(null);
         };
         // A small delay to ensure the chart has rendered before capturing
-        setTimeout(performDownload, 500);
+        setTimeout(performDownload, 950);
     }
   }, [pdfRenderContent, t, toast, downloadInfo]);
   
@@ -442,6 +462,10 @@ export default function ChatPageClient() {
         trendsAndGraphsTitle: "Trends & Visualizations",
         identifiedFlawsTitle: "Identified Flaws & Risks",
         financialPerformanceTitle: "Financial Performance",
+        chartCompositionTitle: "Period mix (share of totals)",
+        chartShareNote:
+          "Shares use absolute revenue where present; otherwise net income or equal weighting. Illustrative layout.",
+        criticalInsightsTitle: "Critical insights",
         revenue: "Revenue",
         netIncome: "Net Income",
       },
@@ -456,6 +480,10 @@ export default function ChatPageClient() {
         trendsAndGraphsTitle: "الاتجاهات والتصورات",
         identifiedFlawsTitle: "العيوب والمخاطر المحددة",
         financialPerformanceTitle: "الأداء المالي",
+        chartCompositionTitle: "مزيج الفترات (حصة من الإجمالي)",
+        chartShareNote:
+          "تُحسب الحصص من القيمة المطلقة للإيرادات عند توفرها؛ وإلا صافي الدخل أو أوزان متساوية. تخطيط توضيحي.",
+        criticalInsightsTitle: "رؤى حرجة",
         revenue: "الإيرادات",
         netIncome: "صافي الدخل",
       }
@@ -501,52 +529,143 @@ export default function ChatPageClient() {
     } else if (type === 'financial' && 'creditScorePrediction' in report) {
       const financialReport = report as NonNullable<Message['financialReport']>;
       reportTitle = selectedTitles.financialReportTitle;
-      
+
+      const sectionBox: React.CSSProperties = {
+        border: '1px solid #e5e7eb',
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 12,
+        breakInside: 'avoid' as const,
+        pageBreakInside: 'avoid' as const,
+      };
+
+      const summarySections = splitSummarySections(financialReport.summary);
+      const summaryHtml = (
+        <div style={{ marginBottom: 16 }}>
+          <h2
+            style={{
+              fontSize: '14px',
+              fontWeight: 'bold',
+              marginTop: 0,
+              marginBottom: 10,
+              borderBottom: '1px solid #e5e7eb',
+              paddingBottom: 6,
+            }}
+          >
+            {selectedTitles.summary}
+          </h2>
+          {summarySections.map((sec, idx) => (
+            <div key={idx} style={sectionBox}>
+              <div style={{ fontSize: '12px', fontWeight: 700, marginBottom: 6, color: '#111827' }}>{sec.title}</div>
+              <p style={{ fontSize: '11px', lineHeight: 1.6, whiteSpace: 'pre-wrap', margin: 0, color: '#374151' }}>{sec.body}</p>
+            </div>
+          ))}
+        </div>
+      );
+
       const trendsHtml = financialReport.trendsAndGraphs ? (
-        <>
-          <h2 style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '15px', marginBottom: '5px' }}>{selectedTitles.trendsAndGraphsTitle}</h2>
-          <p style={{ fontSize: '11px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{financialReport.trendsAndGraphs}</p>
-        </>
-      ) : null;
-      
-      const flawsHtml = (financialReport.identifiedFlaws && financialReport.identifiedFlaws.length > 0) ? (
-        <>
-          <h2 style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '15px', marginBottom: '5px' }}>{selectedTitles.identifiedFlawsTitle}</h2>
-          <ul style={{ padding: 0, margin: 0, listStyle: 'none' }}>
-            {financialReport.identifiedFlaws.map((flaw, i) => (
-              <li key={i} style={{ display: 'flex', alignItems: 'flex-start', marginBottom: '12px' }}>
-                  <span style={{ height: '8px', width: '8px', borderRadius: '50%', backgroundColor: '#ef4444', flexShrink: 0, marginTop: '5px', [isRtl ? 'marginLeft' : 'marginRight']: '12px' }}></span>
-                  <p style={{ fontSize: '11px', lineHeight: 1.6, whiteSpace: 'pre-wrap', margin: 0 }}>{flaw}</p>
-              </li>
-            ))}
-          </ul>
-        </>
+        <div style={{ ...sectionBox, marginBottom: 16 }}>
+          <h2 style={{ fontSize: '14px', fontWeight: 'bold', margin: '0 0 8px 0' }}>{selectedTitles.trendsAndGraphsTitle}</h2>
+          <p style={{ fontSize: '11px', lineHeight: 1.6, whiteSpace: 'pre-wrap', margin: 0 }}>{financialReport.trendsAndGraphs}</p>
+        </div>
       ) : null;
 
-      const chartHtml = (financialReport.keyMetrics && financialReport.keyMetrics.length > 0) ? (
-        <>
-           <h2 style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '15px', marginBottom: '5px' }}>{selectedTitles.financialPerformanceTitle}</h2>
-           <div style={{ width: '680px', height: '320px' }}>
-              <FinancialReportChart 
-                data={financialReport.keyMetrics} 
-                revenueLabel={selectedTitles.revenue} 
-                netIncomeLabel={selectedTitles.netIncome} 
-                isAnimationActive={false}
-              />
-           </div>
-        </>
-      ) : null;
+      const insights = financialReport.criticalInsights ?? [];
+      const insightsHtml =
+        insights.length > 0 ? (
+          <div style={{ ...sectionBox, marginBottom: 16 }}>
+            <h2 style={{ fontSize: '14px', fontWeight: 'bold', margin: '0 0 8px 0' }}>{selectedTitles.criticalInsightsTitle}</h2>
+            <ul style={{ margin: 0, paddingLeft: isRtl ? 0 : 18, paddingRight: isRtl ? 18 : 0, listStyleType: 'disc' }}>
+              {insights.map((line, i) => (
+                <li key={i} style={{ fontSize: '11px', lineHeight: 1.55, marginBottom: 6, color: '#111827' }}>
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null;
+
+      const flawsHtml =
+        financialReport.identifiedFlaws && financialReport.identifiedFlaws.length > 0 ? (
+          <div style={{ marginBottom: 16 }}>
+            <h2
+              style={{
+                fontSize: '14px',
+                fontWeight: 'bold',
+                marginTop: 0,
+                marginBottom: 10,
+                borderBottom: '1px solid #e5e7eb',
+                paddingBottom: 6,
+              }}
+            >
+              {selectedTitles.identifiedFlawsTitle}
+            </h2>
+            {financialReport.identifiedFlaws.map((flaw, i) => {
+              const parsed = parseStructuredFlaw(flaw);
+              const badgeBg =
+                parsed.severity === 'high' ? '#fee2e2' : parsed.severity === 'medium' ? '#ffedd5' : '#f3f4f6';
+              const badgeFg =
+                parsed.severity === 'high' ? '#991b1b' : parsed.severity === 'medium' ? '#9a3412' : '#374151';
+              return (
+                <div key={i} style={{ ...sectionBox, borderColor: '#fecaca' }}>
+                  {parsed.severity && (
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        fontSize: '9px',
+                        fontWeight: 700,
+                        letterSpacing: '0.06em',
+                        textTransform: 'uppercase',
+                        padding: '3px 8px',
+                        borderRadius: 999,
+                        backgroundColor: badgeBg,
+                        color: badgeFg,
+                        marginBottom: 6,
+                      }}
+                    >
+                      {parsed.severity}
+                    </span>
+                  )}
+                  {parsed.headline && (
+                    <div style={{ fontSize: '12px', fontWeight: 700, marginBottom: 4, color: '#111827' }}>{parsed.headline}</div>
+                  )}
+                  <p style={{ fontSize: '11px', lineHeight: 1.6, whiteSpace: 'pre-wrap', margin: 0, color: '#374151' }}>{parsed.body}</p>
+                </div>
+              );
+            })}
+          </div>
+        ) : null;
+
+      const chartHtml =
+        financialReport.keyMetrics && financialReport.keyMetrics.length > 0 ? (
+          <div style={{ ...sectionBox, marginBottom: 16, width: '100%', maxWidth: 720 }}>
+            <FinancialReportCharts
+              data={financialReport.keyMetrics}
+              revenueLabel={selectedTitles.revenue}
+              netIncomeLabel={selectedTitles.netIncome}
+              barTitle={selectedTitles.financialPerformanceTitle}
+              pieTitle={selectedTitles.chartCompositionTitle}
+              footnote={selectedTitles.chartShareNote}
+              isAnimationActive={false}
+              compact
+            />
+          </div>
+        ) : null;
 
       reportContentHtml = (
         <>
-          <h2 style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '15px', marginBottom: '5px' }}>{selectedTitles.summary}</h2>
-          <p style={{ fontSize: '11px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{financialReport.summary}</p>
+          {summaryHtml}
           {trendsHtml}
           {chartHtml}
-          <h2 style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '15px', marginBottom: '5px' }}>{selectedTitles.prediction}</h2>
-          <p style={{ fontSize: '11px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{financialReport.prediction}</p>
-          <h2 style={{ fontSize: '14px', fontWeight: 'bold', marginTop: '15px', marginBottom: '5px' }}>{selectedTitles.creditScoreAssessment}</h2>
-          <p style={{ fontSize: '11px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{financialReport.creditScorePrediction}</p>
+          <div style={{ ...sectionBox, marginBottom: 16 }}>
+            <h2 style={{ fontSize: '14px', fontWeight: 'bold', margin: '0 0 8px 0' }}>{selectedTitles.prediction}</h2>
+            <p style={{ fontSize: '11px', lineHeight: 1.6, whiteSpace: 'pre-wrap', margin: 0 }}>{financialReport.prediction}</p>
+          </div>
+          <div style={{ ...sectionBox, marginBottom: 16 }}>
+            <h2 style={{ fontSize: '14px', fontWeight: 'bold', margin: '0 0 8px 0' }}>{selectedTitles.creditScoreAssessment}</h2>
+            <p style={{ fontSize: '11px', lineHeight: 1.6, whiteSpace: 'pre-wrap', margin: 0 }}>{financialReport.creditScorePrediction}</p>
+          </div>
+          {insightsHtml}
           {flawsHtml}
         </>
       );

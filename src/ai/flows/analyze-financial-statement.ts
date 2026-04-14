@@ -60,7 +60,17 @@ const AnalyzeFinancialStatementOutputSchema = z.object({
     .describe(
       'A predicted credit score (as a specific number or a tight range, e.g., 680-720) and a brief justification, framed within the context of Omani and general Middle Eastern credit bureau standards.'
     ),
-  identifiedFlaws: z.array(z.string()).describe('A list of critical financial flaws, risks, or red flags identified in the statements. Each string is a separate point.'),
+  identifiedFlaws: z
+    .array(z.string())
+    .describe(
+      'Critical risks / flaws. Each item MUST follow exactly: **Severity — Topic:** one or two sentences. Severity is exactly one of: High | Medium | Low (English words even if the rest of the report is Arabic). Example: "High — Liquidity: ..."'
+    ),
+  /** Short executive bullets (liquidity, leverage, concentration, earnings quality, etc.). */
+  criticalInsights: z
+    .array(z.string())
+    .max(8)
+    .optional()
+    .describe('4–8 crisp, non-redundant insight bullets for leadership; each string standalone (no JSON nesting).'),
   keyMetrics: z
     .array(KeyMetricRowSchema)
     .describe(
@@ -70,13 +80,15 @@ const AnalyzeFinancialStatementOutputSchema = z.object({
 
 /** Public shape for UI: metrics never use `null` (only numbers or omitted). */
 type ParsedFinancialAnalysis = z.infer<typeof AnalyzeFinancialStatementOutputSchema>;
-export type AnalyzeFinancialStatementOutput = Omit<ParsedFinancialAnalysis, 'keyMetrics'> & {
+export type AnalyzeFinancialStatementOutput = Omit<ParsedFinancialAnalysis, 'keyMetrics' | 'criticalInsights'> & {
   keyMetrics: Array<{ name: string; revenue?: number; netIncome?: number }>;
+  criticalInsights: string[];
 };
 
 function stripNullishMetrics(data: z.infer<typeof AnalyzeFinancialStatementOutputSchema>): AnalyzeFinancialStatementOutput {
   return {
     ...data,
+    criticalInsights: (data.criticalInsights ?? []).filter((s) => typeof s === 'string' && s.trim().length > 0),
     keyMetrics: data.keyMetrics.map((m) => {
       const row: { name: string; revenue?: number; netIncome?: number } = { name: m.name };
       if (typeof m.revenue === 'number' && !Number.isNaN(m.revenue)) {
@@ -154,13 +166,14 @@ Your goal is to be surgically precise, focusing exclusively on the financial dat
         *   **Leverage:** Debt-to-Equity Ratio, Debt-to-Asset Ratio.
     *   **Trend Analysis:** Identify significant year-over-year (YoY) changes and question their drivers.
 
-3.  **Generate In-Depth Report:** Synthesize your findings into a detailed report with six sections:
-    *   **summary:** Provide an expansive, multi-paragraph summary of the entity's financial health. Weave in the KPIs and ratios to support your analysis of strengths and weaknesses.
-    *   **trendsAndGraphs:** Provide a narrative description of the key financial trends (e.g., YoY revenue growth, margin changes). For each trend, describe a graph that would visually represent it.
-    *   **prediction:** Offer a clear, evidence-backed prediction of the company's future financial trajectory. Justify this by citing specific ratios, trends, and cash flow dynamics.
-    *   **creditScorePrediction:** Based on your analysis, provide a predicted credit score (as a specific number or a tight range, e.g., 680-720), framed within **Omani and general Middle Eastern credit bureau standards**. Justify the score.
-    *   **identifiedFlaws:** List any critical financial flaws, risks, or red flags as a list of distinct points.
-    *   **keyMetrics:** Array of up to 5 objects with **name** (period label). Include **revenue** and **netIncome** only as numbers when you can infer them from the document. If the upload is not a traditional P&L (e.g. customer/account CSV), you may return fewer rows or omit revenue/netIncome keys entirely — **never use JSON null for revenue or netIncome** (omit the property instead).
+3.  **Generate In-Depth Report:** Synthesize your findings into a detailed report with these sections:
+    *   **summary:** Write in the requested **Language** (English or Arabic). Structure the summary with Markdown H2 headings on their own lines: start each line with two hash characters and a space, in this exact order: (1) Executive overview — 1–2 tight paragraphs; (2) Key quantitative signals — bullets or short paragraphs citing numbers from the document; (3) Risks worth monitoring — even if qualitative; (4) Bottom line — one closing paragraph. Use professional banking tone.
+    *   **trendsAndGraphs:** Narrative on trends and what charts would show (no chart JSON here).
+    *   **prediction:** Evidence-backed outlook with explicit reference to at least one concrete signal from the document.
+    *   **creditScorePrediction:** Score or tight range plus justification (Omani / regional credit-bureau framing when relevant).
+    *   **identifiedFlaws:** Each array entry MUST follow **Severity — Topic:** explanation (see schema). No bare sentences without severity and topic.
+    *   **criticalInsights:** 4–8 separate executive bullets (liquidity, leverage, concentration, earnings quality, funding stability, data gaps, etc.). No duplication of identifiedFlaws wording.
+    *   **keyMetrics:** Up to 5 objects with **name** (period label). Include **revenue** and **netIncome** only as numbers when inferable — **omit keys when unknown, never null**. For non-P&L uploads, return 0–3 best-effort rows so charts can still render (e.g. aggregate balances by inferred period).
 
 {format_instructions}`;
 
