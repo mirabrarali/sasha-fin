@@ -56,6 +56,60 @@ function bufferLooksLikeTextCsv(buf: Buffer): boolean {
     return true;
 }
 
+function decodeTextBuffer(buf: Buffer): string {
+    if (buf.length === 0) return '';
+
+    // UTF-8 BOM
+    if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) {
+        return buf.toString('utf8', 3);
+    }
+
+    // UTF-16 LE BOM
+    if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xfe) {
+        try {
+            return new TextDecoder('utf-16le').decode(buf.subarray(2));
+        } catch {
+            return buf.toString('utf8');
+        }
+    }
+
+    // UTF-16 BE BOM
+    if (buf.length >= 2 && buf[0] === 0xfe && buf[1] === 0xff) {
+        try {
+            const swapped = Buffer.from(buf.subarray(2));
+            for (let i = 0; i + 1 < swapped.length; i += 2) {
+                const first = swapped[i];
+                swapped[i] = swapped[i + 1]!;
+                swapped[i + 1] = first!;
+            }
+            return new TextDecoder('utf-16le').decode(swapped);
+        } catch {
+            return buf.toString('utf8');
+        }
+    }
+
+    // Heuristic: alternating null bytes often indicates UTF-16 without BOM (common in text exports like .jrn).
+    const sample = buf.subarray(0, Math.min(buf.length, 4096));
+    let oddNulls = 0;
+    let evenNulls = 0;
+    for (let i = 0; i < sample.length; i++) {
+        if (sample[i] === 0) {
+            if (i % 2 === 0) evenNulls++;
+            else oddNulls++;
+        }
+    }
+    const threshold = Math.max(8, Math.floor(sample.length * 0.08));
+    if (oddNulls > threshold || evenNulls > threshold) {
+        try {
+            return new TextDecoder('utf-16le').decode(buf);
+        } catch {
+            // ignore and fallback
+        }
+    }
+
+    return buf.toString('utf8');
+}
+
 function workbookToDelimitedText(workbook: XLSX.WorkBook): string {
     let text = '';
     for (const sheetName of workbook.SheetNames) {
@@ -80,8 +134,8 @@ function tryExtractSpreadsheet(buffer: Buffer): string | null {
 }
 
 async function extractPdfWithUnpdf(buffer: Buffer): Promise<FileExtractionResult> {
-    // Server-only: do not let the client flight bundler resolve `unpdf` (see generate-dashboard trace).
-    const { extractText, getMeta } = await import(/* webpackIgnore: true */ 'unpdf');
+    // Normal dynamic import so Next/Vercel can trace/bundle server dependency reliably.
+    const { extractText, getMeta } = await import('unpdf');
     const data = new Uint8Array(buffer);
     const result = await extractText(data, { mergePages: true });
     const raw = result.text as string | string[];
@@ -141,7 +195,7 @@ export async function extractTextFromFile(base64DataUri: string): Promise<FileEx
                 return { text: sheetText, type };
             }
             if (mimeBase === 'application/vnd.ms-excel' && bufferLooksLikeTextCsv(buffer)) {
-                return { text: buffer.toString('utf-8'), type: 'csv' };
+                return { text: decodeTextBuffer(buffer), type: 'csv' };
             }
             throw new Error('Could not read spreadsheet file.');
         }
@@ -156,7 +210,7 @@ export async function extractTextFromFile(base64DataUri: string): Promise<FileEx
             mimeBase === 'text/xml' ||
             mimeBase === 'text/html'
         ) {
-            const body = buffer.toString('utf-8');
+            const body = decodeTextBuffer(buffer);
             const type =
                 mimeBase === 'application/json'
                     ? 'json'
@@ -178,13 +232,13 @@ export async function extractTextFromFile(base64DataUri: string): Promise<FileEx
                 throw new Error('File looks like Excel but could not be read.');
             }
             if (bufferLooksLikeTextCsv(buffer)) {
-                return { text: buffer.toString('utf-8'), type: 'csv' };
+                return { text: decodeTextBuffer(buffer), type: 'csv' };
             }
             const sheetText = tryExtractSpreadsheet(buffer);
             if (sheetText) {
                 return { text: sheetText, type: 'spreadsheet' };
             }
-            return { text: buffer.toString('utf-8'), type: 'text' };
+            return { text: decodeTextBuffer(buffer), type: 'text' };
         }
 
         const fallbackSheet = tryExtractSpreadsheet(buffer);
@@ -192,7 +246,7 @@ export async function extractTextFromFile(base64DataUri: string): Promise<FileEx
             return { text: fallbackSheet, type: 'spreadsheet' };
         }
 
-        const asUtf8 = buffer.toString('utf-8');
+        const asUtf8 = decodeTextBuffer(buffer);
         if (bufferLooksLikeTextCsv(buffer) && asUtf8.trim().length > 0) {
             return { text: asUtf8, type: 'csv' };
         }
