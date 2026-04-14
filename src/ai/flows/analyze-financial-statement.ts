@@ -18,7 +18,7 @@ const AnalyzeFinancialStatementInputSchema = z.object({
   pdfDataUri: z
     .string()
     .describe(
-      "Financial data as a data URI with MIME type and Base64 encoding. Supported: application/pdf, text/csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet. Example: 'data:application/pdf;base64,...' or 'data:text/csv;base64,...'."
+      "Financial data as a data URI (Base64). Supported: PDF, Excel (.xlsx, .xls, .xlsm, .ods), CSV/TSV, plain text and journals (.jrn), JSON, XML, HTML."
     ),
   language: z.enum(['en', 'ar']).default('en').describe('The language for the response, either English (en) or Arabic (ar).'),
 });
@@ -72,15 +72,19 @@ export async function analyzeFinancialStatement(input: AnalyzeFinancialStatement
       extractTextFromFile(input.pdfDataUri),
       TIMEOUTS.PDF_EXTRACTION
     );
-    const cleanedText = cleanText(text);
+    // PDF: collapse whitespace for LLM. Spreadsheets / JRN / JSON / plain text: keep structure.
+    const cleanedText =
+      type === 'pdf'
+        ? cleanText(text)
+        : text.replace(/\r\n?/g, '\n').replace(/\u00a0/g, ' ').trim();
     const numPages = metadata?.numPages ?? 0;
 
     console.log(`Extracted ${cleanedText.length} characters from ${type} file${numPages ? ` (${numPages} pages)` : ''}`);
 
-    const minChars = type === 'csv' || type === 'xlsx' ? 20 : 100;
+    const minChars = type === 'pdf' ? 100 : 20;
     if (!cleanedText || cleanedText.length < minChars) {
       throw new Error(
-        'Insufficient text extracted from the file. For PDFs, ensure the document has selectable text. For spreadsheets, ensure the file is not empty.'
+        'Insufficient text extracted from the file. For PDFs, ensure the document has selectable text. For spreadsheets, journals (.jrn), CSV, or text exports, ensure the file is not empty.'
       );
     }
 

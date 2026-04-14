@@ -40,6 +40,11 @@ import {
   isLikelySupportedDragMime,
 } from '@/lib/chat-upload-utils';
 
+function isStaleServerActionError(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : String(e);
+  return /failed to find server action/i.test(msg);
+}
+
 const generateAndDownloadPdf = async (element: HTMLElement, fileName: string) => {
     try {
         const { default: jsPDF } = await import('jspdf');
@@ -255,10 +260,11 @@ export default function ChatPageClient() {
       }
     } catch (error) {
       console.error(error);
+      const stale = isStaleServerActionError(error);
       toast({
         variant: 'destructive',
-        title: t('genericErrorTitle'),
-        description: t('genericErrorDesc'),
+        title: stale ? t('staleDeploymentTitle') : t('genericErrorTitle'),
+        description: stale ? t('staleDeploymentDesc') : t('genericErrorDesc'),
       });
       setMessages(prev => [...prev, {
         id: Date.now().toString(),
@@ -331,10 +337,11 @@ export default function ChatPageClient() {
 
       } catch (error) {
         console.error('Financial document analysis failed:', error);
+        const stale = isStaleServerActionError(error);
         toast({
           variant: 'destructive',
-          title: t('analysisFailedTitle'),
-          description: t('analysisFailedDesc'),
+          title: stale ? t('staleDeploymentTitle') : t('analysisFailedTitle'),
+          description: stale ? t('staleDeploymentDesc') : t('analysisFailedDesc'),
         });
         setMessages(prev => [...prev, {
           id: Date.now().toString(),
@@ -409,10 +416,13 @@ export default function ChatPageClient() {
 
     } catch (error) {
       console.error("Failed to generate translated report:", error);
+      const stale = isStaleServerActionError(error);
       toast({
         variant: 'destructive',
-        title: t('translationErrorTitle'),
-        description: t('translationErrorDesc', { lang: lang === 'en' ? 'English' : 'Arabic' }),
+        title: stale ? t('staleDeploymentTitle') : t('translationErrorTitle'),
+        description: stale
+          ? t('staleDeploymentDesc')
+          : t('translationErrorDesc', { lang: lang === 'en' ? 'English' : 'Arabic' }),
       });
       setIsDownloading(false);
       setDownloadInfo(null);

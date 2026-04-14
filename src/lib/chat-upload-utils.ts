@@ -148,4 +148,6 @@ export const CHAT_FILE_INPUT_ACCEPT = [
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'application/json',
     'text/plain',
+    // Lets users pick any file in strict OS dialogs; we still validate in isChatFinancialUpload.
+    '*/*',
 ].join(',');
