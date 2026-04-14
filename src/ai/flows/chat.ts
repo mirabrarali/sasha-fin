@@ -61,6 +61,44 @@ const ChatOutputSchema = z.object({
 });
 export type ChatOutput = z.infer<typeof ChatOutputSchema>;
 
+/** If the model leaks JSON or fences into the visible `content`, normalize to prose only. */
+function sanitizeDisplayedChatContent(raw: string): string {
+  const s = raw.trim();
+  if (!s) return raw;
+
+  const wholeFence = s.match(/^```(?:json)?\s*([\s\S]*?)```$/im);
+  if (wholeFence?.[1]) {
+    try {
+      const data = JSON.parse(wholeFence[1].trim()) as unknown;
+      const checked = ChatOutputSchema.safeParse(data);
+      if (checked.success && checked.data.content.trim()) {
+        return checked.data.content.trim();
+      }
+    } catch {
+      // keep going
+    }
+  }
+
+  if (s.startsWith('{') && /"content"\s*:/.test(s)) {
+    try {
+      const data = JSON.parse(s) as unknown;
+      const checked = ChatOutputSchema.safeParse(data);
+      if (checked.success && checked.data.content.trim()) {
+        return checked.data.content.trim();
+      }
+    } catch {
+      // not JSON
+    }
+  }
+
+  return raw.trim();
+}
+
+function withSanitizedContent(out: ChatOutput): ChatOutput {
+  const content = sanitizeDisplayedChatContent(out.content);
+  return content === out.content ? out : { ...out, content };
+}
+
 async function resolveChatOutput(
   rawResponse: string,
   parser: Pick<LooseStructuredParser, 'parse'>
@@ -72,7 +110,9 @@ async function resolveChatOutput(
 
   try {
     const parsed = (await parser.parse(text)) as ChatOutput;
-    if (parsed?.content?.trim()) return parsed;
+    if (parsed?.content?.trim()) {
+      return withSanitizedContent(parsed);
+    }
   } catch {
     // fall through
   }
@@ -83,13 +123,13 @@ async function resolveChatOutput(
     const data = JSON.parse(jsonCandidate) as unknown;
     const checked = ChatOutputSchema.safeParse(data);
     if (checked.success && checked.data.content.trim()) {
-      return checked.data;
+      return withSanitizedContent(checked.data);
     }
   } catch {
     // not JSON
   }
 
-  return { content: text };
+  return { content: sanitizeDisplayedChatContent(text) };
 }
 
 export async function chat(input: ChatInput): Promise<ChatOutput> {
@@ -153,6 +193,7 @@ ${knowledgeBase || 'No custom instructions provided.'}
 **Core Directives:**
 - **Identity:** You are a Banking Chatbot. Never reveal you are an AI.
 - **Language Adherence:** You MUST respond *only* in the language specified: **${input.language === 'ar' ? 'Arabic' : 'English'}**. Do not switch languages.
+- **Visible reply (critical):** The user only sees the structured field \`content\`. Write **natural conversational prose** there—complete sentences, as in a normal banking chat. **Never** put JSON, markdown \`\`\` fences, schema key names, or machine-readable blobs inside \`content\`. If you follow the format instructions below, the outer structure is handled separately; \`content\` must read like a human analyst, not like code.
 - **Proactive Synthesis:** Your primary goal is to provide comprehensive, actionable intelligence. Do not just answer questions; synthesize information from all available sources to provide deeper insights and strategic advice.
 - **Chart Generation:** If the user asks for a chart, graph, or any kind of data visualization, you MUST populate the 'chart' field in the output. Analyze the available data from uploaded documents (PDFs, CSVs) to create a meaningful chart. Extract the necessary labels and data points. Create a clear title for the chart. If the data is not available, inform the user that you cannot create the chart.
 - **Spreadsheet / CSV precision:** When the document includes a **GROUND TRUTH** section (SheetJS parse), treat the stated **data row count**, **column names**, and **JSON/CSV samples** as authoritative. Do not guess counts or invent rows; if the user asks for all names and the sample is partial, say how many rows exist and list what appears in the provided excerpt.

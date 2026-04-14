@@ -1,6 +1,7 @@
-
 import type { Metadata } from 'next';
 import DataAnalyticsClient from './data-analytics-client';
+
+export const maxDuration = 120;
 
 export const metadata: Metadata = {
     title: 'Data Analytics Dashboard',

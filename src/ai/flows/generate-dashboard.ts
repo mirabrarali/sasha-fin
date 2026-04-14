@@ -96,7 +96,7 @@ export async function generateDashboard(input: GenerateDashboardInput): Promise<
     // Step 5: Invoke LLM with timeout
     console.log('Generating dashboard analysis...');
     const llm = getLLM();
-    const response = await withLLMTimeout(llm.invoke(prompt));
+    const response = await withLLMTimeout(llm.invoke(prompt), TIMEOUTS.LLM_CHAT);
 
     // Step 6: Parse structured output
     const result = await parser.parse(response.content as string) as GenerateDashboardOutput;

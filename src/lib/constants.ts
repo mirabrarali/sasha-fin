@@ -41,7 +41,10 @@ const chatLlmMs =
 
 export const TIMEOUTS = {
     LLM_REQUEST: 60000, // 60 seconds — short flows (loan, summarize, etc.)
-    /** Chat often sends large uploads + history; Groq can exceed 60s. Override with LLM_CHAT_TIMEOUT_MS (ms, min 10000). */
+    /**
+     * Long Groq calls: chat (upload + history), financial statement upload analysis, dashboards.
+     * Override with LLM_CHAT_TIMEOUT_MS (ms, min 10000).
+     */
     LLM_CHAT: chatLlmMs,
     PDF_EXTRACTION: 30000, // 30 seconds for PDF extraction
     FILE_UPLOAD: 120000, // 2 minutes for file upload
