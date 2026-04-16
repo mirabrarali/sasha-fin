@@ -14,6 +14,9 @@ import { withLLMTimeout, withFileOperationTimeout } from '@/lib/timeout-utils';
 const PRIMARY_DOC_CHAR_BUDGET = CONTEXT_LIMITS.FINANCIAL_STATEMENT;
 const FALLBACK_DOC_CHAR_BUDGET = Math.max(10_000, Math.floor(CONTEXT_LIMITS.FINANCIAL_STATEMENT * 0.55));
 
+/** Structured analysis needs room for long `summary` plus all other keys; low limits yield truncated JSON and schema failures. */
+const FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS = 8192;
+
 const AnalyzeFinancialStatementInputSchema = z.object({
   pdfDataUri: z
     .string()
@@ -139,6 +142,8 @@ Your goal is to be surgically precise, focusing exclusively on the financial dat
 - identifiedFlaws: Every item MUST follow "Severity — Topic: explanation" where Severity is exactly High, Medium, or Low.
 - criticalInsights: 4–8 distinct executive bullets; avoid repeating identifiedFlaws wording.
 - keyMetrics: Up to 5 objects with name + revenue/netIncome when inferable. Omit unknown numeric keys, never null.
+
+CRITICAL: Your reply must be one complete JSON object with every required key present (summary, trendsAndGraphs, prediction, creditScorePrediction, identifiedFlaws, keyMetrics). If you are near length limits, shorten earlier sections—never stop after only summary or omit keys.
 `;
 
 function buildCompactDocumentText(raw: string, type: string, maxChars: number): string {
@@ -190,6 +195,11 @@ function isRequestTooLargeError(error: unknown): boolean {
   );
 }
 
+function isStructuredOutputSchemaError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return message.includes('Schema validation failed') || message.includes('must have required property');
+}
+
 async function runAnalyzeFinancialStatement(
   input: AnalyzeFinancialStatementInput
 ): Promise<AnalyzeFinancialStatementOutput> {
@@ -231,7 +241,7 @@ async function runAnalyzeFinancialStatement(
       try {
         const response = await withLLMTimeout(
           ai.generate({
-            model: defaultModel({ temperature: 0.2, maxOutputTokens: 2200 }),
+            model: defaultModel({ temperature: 0.2, maxOutputTokens: FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS }),
             use: [defaultRetryMiddleware],
             prompt,
             output: { schema: AnalyzeFinancialStatementOutputSchema },
@@ -249,6 +259,23 @@ async function runAnalyzeFinancialStatement(
         if (i < docCandidates.length - 1 && isRequestTooLargeError(error)) {
           console.warn('LLM request exceeded context limits; retrying with smaller compact context...');
           continue;
+        }
+        if (isStructuredOutputSchemaError(error)) {
+          console.warn('Structured output failed; retrying once with JSON-as-text parsing...');
+          try {
+            const textRetry = await withLLMTimeout(
+              ai.generate({
+                model: defaultModel({ temperature: 0.2, maxOutputTokens: FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS }),
+                use: [defaultRetryMiddleware],
+                prompt: `${prompt}\n\nReturn ONLY valid JSON matching the schema (no markdown fences).`,
+              }),
+              TIMEOUTS.LLM_CHAT
+            );
+            result = resolveFinancialAnalysisOutput(textRetry.text ?? '');
+            break;
+          } catch (fallbackErr) {
+            lastAttemptError = fallbackErr;
+          }
         }
         throw error;
       }
