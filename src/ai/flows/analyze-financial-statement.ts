@@ -14,8 +14,30 @@ import { withLLMTimeout, withFileOperationTimeout } from '@/lib/timeout-utils';
 const PRIMARY_DOC_CHAR_BUDGET = CONTEXT_LIMITS.FINANCIAL_STATEMENT;
 const FALLBACK_DOC_CHAR_BUDGET = Math.max(10_000, Math.floor(CONTEXT_LIMITS.FINANCIAL_STATEMENT * 0.55));
 
-/** Structured analysis needs room for long `summary` plus all other keys; low limits yield truncated JSON and schema failures. */
-const FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS = 8192;
+/**
+ * Large enough for structured JSON with a long `summary` plus all other keys.
+ * Truncation mid-JSON still happens at 8k on verbose HTML summaries; 24k leaves headroom.
+ */
+const FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS = 24_576;
+
+const SUMMARY_MAX_CHARS = 2800;
+const TRENDS_MAX_CHARS = 1200;
+const PREDICTION_MAX_CHARS = 700;
+const CREDIT_SCORE_MAX_CHARS = 700;
+const FLAW_ITEM_MAX_CHARS = 220;
+const INSIGHT_ITEM_MAX_CHARS = 160;
+
+/** Shorter budgets so the model always finishes every required JSON key (used after failures). */
+const COMPACT_OUTPUT_INSTRUCTIONS = `
+STRICT per-field caps (character counts include HTML/Markdown inside strings):
+- summary: at most ${SUMMARY_MAX_CHARS} characters; keep all four H2 sections but tight prose.
+- trendsAndGraphs: at most ${TRENDS_MAX_CHARS} characters.
+- prediction: at most ${PREDICTION_MAX_CHARS} characters.
+- creditScorePrediction: at most ${CREDIT_SCORE_MAX_CHARS} characters.
+- identifiedFlaws: 3–6 items, each at most ${FLAW_ITEM_MAX_CHARS} characters.
+- criticalInsights: if present, 4–6 items, each at most ${INSIGHT_ITEM_MAX_CHARS} characters.
+- keyMetrics: 0–5 rows; when the document has no fiscal periods, use a single row with name "Snapshot" and omit revenue/netIncome.
+`;
 
 const AnalyzeFinancialStatementInputSchema = z.object({
   pdfDataUri: z
@@ -39,31 +61,35 @@ const KeyMetricRowSchema = z.object({
 const AnalyzeFinancialStatementOutputSchema = z.object({
   summary: z
     .string()
+    .max(SUMMARY_MAX_CHARS + 400)
     .describe(
-      "An expansive, multi-paragraph summary of the entity's financial health, weaving in KPIs and ratios to support the analysis."
+      `Institutional summary of financial health (Markdown H2 sections as instructed). Prefer staying under ${SUMMARY_MAX_CHARS} characters so every JSON field can complete.`
     ),
   trendsAndGraphs: z
     .string()
+    .max(TRENDS_MAX_CHARS + 300)
     .describe(
-      'A description of key financial trends and what relevant graphs (like revenue over time, profit margins) would visually represent. This should be a narrative description.'
+      'Narrative on trends and chart suggestions (no chart JSON). Prefer staying under budget so other keys are not truncated.'
     ),
   prediction: z
     .string()
+    .max(PREDICTION_MAX_CHARS + 200)
     .describe(
-      'A clear, evidence-backed prediction of the company\'s financial trajectory (e.g., "Strong Growth Potential," "Stable but Cautious," "High-Risk").'
+      'Evidence-backed outlook (e.g., "Strong Growth Potential," "Stable but Cautious," "High-Risk").'
     ),
   creditScorePrediction: z
     .string()
+    .max(CREDIT_SCORE_MAX_CHARS + 200)
     .describe(
-      'A predicted credit score (as a specific number or a tight range, e.g., 680-720) and a brief justification, framed within the context of Omani and general Middle Eastern credit bureau standards.'
+      'Predicted credit score or tight range (e.g., 680-720) with brief justification (Oman / Middle East context).'
     ),
   identifiedFlaws: z
-    .array(z.string())
+    .array(z.string().max(FLAW_ITEM_MAX_CHARS + 120))
     .describe(
       'Critical risks / flaws. Each item MUST follow exactly: "Severity — Topic: explanation". Severity is exactly one of High | Medium | Low.'
     ),
   criticalInsights: z
-    .array(z.string())
+    .array(z.string().max(INSIGHT_ITEM_MAX_CHARS + 80))
     .max(8)
     .optional()
     .describe('4–8 crisp, non-redundant insight bullets for leadership; each string standalone.'),
@@ -130,20 +156,21 @@ Your goal is to be surgically precise, focusing exclusively on the financial dat
 2. Comprehensive Metric & Ratio Analysis:
 - Analyze KPIs, balance sheet posture, cash flows, profitability, liquidity, leverage, and trend direction.
 
-3. Generate report fields:
-- summary: Write in the requested language. Use Markdown H2 headings in this exact order:
+3. Generate report fields (respect caps so JSON is never cut off):
+- summary: Requested language. Markdown H2 headings in this exact order:
   1) Executive overview
   2) Key quantitative signals
   3) Risks worth monitoring
   4) Bottom line
-- trendsAndGraphs: Narrative on trends and chart suggestions (no chart JSON here).
-- prediction: Evidence-backed outlook referencing at least one concrete signal.
-- creditScorePrediction: Score or tight range with concise justification.
-- identifiedFlaws: Every item MUST follow "Severity — Topic: explanation" where Severity is exactly High, Medium, or Low.
-- criticalInsights: 4–8 distinct executive bullets; avoid repeating identifiedFlaws wording.
-- keyMetrics: Up to 5 objects with name + revenue/netIncome when inferable. Omit unknown numeric keys, never null.
+  Aim under ${SUMMARY_MAX_CHARS} characters total for this string.
+- trendsAndGraphs: Under ~${TRENDS_MAX_CHARS} characters; trends + which charts would help (no chart JSON).
+- prediction: Under ~${PREDICTION_MAX_CHARS} characters; cite at least one concrete signal.
+- creditScorePrediction: Under ~${CREDIT_SCORE_MAX_CHARS} characters; score or tight range + brief justification.
+- identifiedFlaws: 3–6 items; each under ~${FLAW_ITEM_MAX_CHARS} chars; format "Severity — Topic: explanation" (Severity: High | Medium | Low).
+- criticalInsights: 4–8 bullets if included; each concise; do not repeat identifiedFlaws verbatim.
+- keyMetrics: Up to 5 objects with name + revenue/netIncome when inferable. If no fiscal periods exist, use one row { "name": "Snapshot" } and omit revenue/netIncome. Omit unknown numeric keys, never null.
 
-CRITICAL: Your reply must be one complete JSON object with every required key present (summary, trendsAndGraphs, prediction, creditScorePrediction, identifiedFlaws, keyMetrics). If you are near length limits, shorten earlier sections—never stop after only summary or omit keys.
+CRITICAL: Emit one complete JSON object with every required key (summary, trendsAndGraphs, prediction, creditScorePrediction, identifiedFlaws, keyMetrics). Write shorter sections if needed—never output only summary or truncate mid-string.
 `;
 
 function buildCompactDocumentText(raw: string, type: string, maxChars: number): string {
@@ -200,6 +227,47 @@ function isStructuredOutputSchemaError(error: unknown): boolean {
   return message.includes('Schema validation failed') || message.includes('must have required property');
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Google occasionally returns 503 / UNAVAILABLE during demand spikes; safe to retry with backoff. */
+function isTransientGeminiError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return (
+    message.includes('UNAVAILABLE') ||
+    message.includes('503') ||
+    message.includes('429') ||
+    message.includes('high demand') ||
+    message.includes('RESOURCE_EXHAUSTED') ||
+    message.includes('Too Many Requests')
+  );
+}
+
+async function withTransientGeminiRetries<T>(
+  context: string,
+  operation: () => Promise<T>,
+  maxAttempts = 4
+): Promise<T> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (e) {
+      if (!isTransientGeminiError(e) || attempt >= maxAttempts) {
+        throw e;
+      }
+      const delayMs = Math.min(10_000, 900 * 2 ** (attempt - 1));
+      console.warn(
+        `${context}: transient Gemini error (attempt ${attempt}/${maxAttempts}); retrying in ${delayMs}ms — ${
+          e instanceof Error ? e.message : String(e)
+        }`
+      );
+      await sleep(delayMs);
+    }
+  }
+  throw new Error(`${context}: exhausted retries without returning`);
+}
+
 async function runAnalyzeFinancialStatement(
   input: AnalyzeFinancialStatementInput
 ): Promise<AnalyzeFinancialStatementOutput> {
@@ -239,14 +307,18 @@ async function runAnalyzeFinancialStatement(
       );
 
       try {
-        const response = await withLLMTimeout(
-          ai.generate({
-            model: defaultModel({ temperature: 0.2, maxOutputTokens: FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS }),
-            use: [defaultRetryMiddleware],
-            prompt,
-            output: { schema: AnalyzeFinancialStatementOutputSchema },
-          }),
-          TIMEOUTS.LLM_CHAT
+        const response = await withTransientGeminiRetries(
+          'financial-statement structured',
+          () =>
+            withLLMTimeout(
+              ai.generate({
+                model: defaultModel({ temperature: 0.2, maxOutputTokens: FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS }),
+                use: [defaultRetryMiddleware],
+                prompt,
+                output: { schema: AnalyzeFinancialStatementOutputSchema },
+              }),
+              TIMEOUTS.LLM_CHAT
+            )
         );
         if (response.output) {
           result = stripNullishMetrics(response.output);
@@ -261,21 +333,40 @@ async function runAnalyzeFinancialStatement(
           continue;
         }
         if (isStructuredOutputSchemaError(error)) {
-          console.warn('Structured output failed; retrying once with JSON-as-text parsing...');
-          try {
-            const textRetry = await withLLMTimeout(
-              ai.generate({
-                model: defaultModel({ temperature: 0.2, maxOutputTokens: FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS }),
-                use: [defaultRetryMiddleware],
-                prompt: `${prompt}\n\nReturn ONLY valid JSON matching the schema (no markdown fences).`,
-              }),
-              TIMEOUTS.LLM_CHAT
-            );
-            result = resolveFinancialAnalysisOutput(textRetry.text ?? '');
-            break;
-          } catch (fallbackErr) {
-            lastAttemptError = fallbackErr;
+          console.warn('Structured output failed; retrying with JSON-as-text (standard then compact budgets)...');
+          const textPromptVariants = [
+            `${prompt}\n\nReturn ONLY valid JSON matching the schema (no markdown fences, no commentary).`,
+            `${prompt}\n${COMPACT_OUTPUT_INSTRUCTIONS}\n\nReturn ONLY valid JSON matching the schema (no markdown fences, no commentary).`,
+          ];
+          let lastFallbackError: unknown = error;
+          for (const textPrompt of textPromptVariants) {
+            try {
+              const textRetry = await withTransientGeminiRetries(
+                'financial-statement json-as-text',
+                () =>
+                  withLLMTimeout(
+                    ai.generate({
+                      model: defaultModel({ temperature: 0.15, maxOutputTokens: FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS }),
+                      use: [defaultRetryMiddleware],
+                      prompt: textPrompt,
+                    }),
+                    TIMEOUTS.LLM_CHAT
+                  )
+              );
+              result = resolveFinancialAnalysisOutput(textRetry.text ?? '');
+              break;
+            } catch (fallbackErr) {
+              lastFallbackError = fallbackErr;
+              console.warn(
+                'JSON-as-text attempt failed:',
+                fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)
+              );
+            }
           }
+          if (result) {
+            break;
+          }
+          throw lastFallbackError instanceof Error ? lastFallbackError : new Error(String(lastFallbackError));
         }
         throw error;
       }
@@ -301,6 +392,11 @@ async function runAnalyzeFinancialStatement(
     if (isRequestTooLargeError(error)) {
       throw new Error(
         'The uploaded file is too large for one AI request. A compact sample was sent automatically, but limits were still exceeded. Try a smaller extract or fewer columns.'
+      );
+    }
+    if (isTransientGeminiError(error)) {
+      throw new Error(
+        'Google Gemini is temporarily unavailable due to high demand. Please wait a minute and try again.'
       );
     }
     throw new Error(`Failed to analyze financial statement: ${errorMessage}`);
