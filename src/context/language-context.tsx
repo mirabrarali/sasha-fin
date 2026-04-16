@@ -16,8 +16,8 @@ const translations: { [key in Language]: { [key: string]: string } } = {
   en: {
     pageTitle: 'Banking Chatbot',
     initialMessage: "Hi, I'm your banking assistant. How can I help you today?",
-    placeholder: 'Ask about loan data or upload PDF, Excel, CSV, JRN, JSON, text…',
-    uploadPdfTooltip: "Upload documents (PDF, Excel, CSV, JRN, JSON, text, …)",
+    placeholder: 'Ask about loan data or upload PDF, Excel, CSV, JSON, text…',
+    uploadPdfTooltip: "Upload documents (PDF, Excel, CSV, JSON, text, …)",
     sendSr: "Send",
     analyzingFile: "Context: {{fileName}}",
     clearPdfTooltip: "Remove uploaded file from session",
@@ -35,7 +35,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     financialAnalysisHeader: "Here is the analysis of the financial statement:",
     invalidPdfTitle: 'Invalid File Type',
     invalidPdfDesc:
-      'Please upload a supported file (PDF, Excel, CSV/TSV, JRN, JSON, text, …). See the upload tooltip for the full list.',
+      'Please upload a supported file (PDF, Excel, CSV/TSV, JSON, text, …). See the upload tooltip for the full list.',
     sessionSaveErrorTitle: 'Could not save session',
     sessionSaveErrorDesc: 'Your browser may be out of space or in private mode.',
     documentLoadedTitle: 'Document Loaded',
@@ -160,13 +160,13 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     fileTooLargeDesc: "File size exceeds {{maxSize}}MB limit. Please upload a smaller file.",
     chatDragDropSupported: "Supported: PDF, CSV, XLSX, XLS",
     chatInvalidFinancialFileDesc:
-      "Please drop a supported file: PDF, Excel (.xlsx, .xls, .xlsm, .ods), CSV/TSV, journal (.jrn), or text/data (.txt, .json, .xml, .yaml, …).",
+      "Please drop a supported file: PDF, Excel (.xlsx, .xls, .xlsm, .ods), CSV/TSV, or text/data (.txt, .json, .xml, .yaml, …).",
   },
   ar: {
     pageTitle: 'المساعد المصرفي',
     initialMessage: 'مرحباً، أنا مساعدك المصرفي. كيف يمكنني مساعدتك اليوم؟',
-    placeholder: 'اسأل عن بيانات القروض أو حمّل PDF أو Excel أو CSV أو JRN أو JSON أو نصًا…',
-    uploadPdfTooltip: "تحميل مستندات (PDF، Excel، CSV، JRN، JSON، نص، …)",
+    placeholder: 'اسأل عن بيانات القروض أو حمّل PDF أو Excel أو CSV أو JSON أو نصًا…',
+    uploadPdfTooltip: "تحميل مستندات (PDF، Excel، CSV، JSON، نص، …)",
     sendSr: "إرسال",
     analyzingFile: "السياق: {{fileName}}",
     clearPdfTooltip: "إزالة الملف المحمّل من الجلسة",
@@ -184,7 +184,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     financialAnalysisHeader: "إليك تحليل البيان المالي:",
     invalidPdfTitle: 'نوع ملف غير صالح',
     invalidPdfDesc:
-      'يرجى تحميل ملفًا مدعومًا (PDF أو Excel أو CSV/TSV أو JRN أو JSON أو نص، …). راجع تلميح التحميل للقائمة الكاملة.',
+      'يرجى تحميل ملفًا مدعومًا (PDF أو Excel أو CSV/TSV أو JSON أو نص، …). راجع تلميح التحميل للقائمة الكاملة.',
     sessionSaveErrorTitle: 'تعذر حفظ الجلسة',
     sessionSaveErrorDesc: 'قد تكون مساحة متصفحك ممتلئة أو في وضع التصفح الخاص.',
     documentLoadedTitle: 'تم تحميل المستند',
@@ -309,7 +309,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     fileTooLargeDesc: "يتجاوز حجم الملف حد {{maxSize}} ميجابايت. يرجى تحميل ملف أصغر.",
     chatDragDropSupported: "المدعومة: PDF، CSV، XLSX، XLS",
     chatInvalidFinancialFileDesc:
-      "يرجى إفلات ملف مدعوم: PDF أو Excel (.xlsx أو .xls أو .xlsm أو .ods) أو CSV/TSV أو دفتر (.jrn) أو نص/بيانات (.txt أو .json أو .xml أو .yaml، …).",
+      "يرجى إفلات ملف مدعوم: PDF أو Excel (.xlsx أو .xls أو .xlsm أو .ods) أو CSV/TSV أو نص/بيانات (.txt أو .json أو .xml أو .yaml، …).",
   },
 };
 

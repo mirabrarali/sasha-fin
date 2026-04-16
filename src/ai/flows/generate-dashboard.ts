@@ -1,16 +1,13 @@
 'use server';
 
 /**
- * @fileOverview Data Analysis Dashboard Generation using LangChain + Groq
- * Migrated from Genkit to LangChain for better performance
+ * @fileOverview Data Analysis Dashboard Generation using Genkit + Gemini
  * No longer uses vision models - handles all input files via text extraction
  */
 
-import { getLLM } from '@/ai/langchain';
+import { ai, defaultModel, defaultRetryMiddleware } from '@/ai/genkit';
 import { extractTextFromFile, cleanText } from '@/lib/pdf-extractor';
-import { StructuredOutputParser } from '@langchain/core/output_parsers';
-import { PromptTemplate } from '@langchain/core/prompts';
-import { z } from 'zod';
+import { z } from 'genkit';
 import { CONTEXT_LIMITS, TIMEOUTS } from '@/lib/constants';
 import { withLLMTimeout, withFileOperationTimeout } from '@/lib/timeout-utils';
 
@@ -44,20 +41,18 @@ const GenerateDashboardOutputSchema = z.object({
 });
 export type GenerateDashboardOutput = z.infer<typeof GenerateDashboardOutputSchema>;
 
-const SYSTEM_PROMPT = `You are a world-class AI data analyst. Your task is to analyze the provided data and generate a comprehensive, structured dashboard report.
+const SYSTEM_PROMPT = `You are a world-class AI data analyst. Analyze the provided data and produce a structured dashboard report.
 
 **Analysis Steps:**
 1.  **Understand the Data:** Examine the content of the data. Identify categorical and numerical columns, tabular structures, or key textual information.
 2.  **Generate a Title:** Create a concise, descriptive title for the dashboard based on the data content.
 3.  **Create a Comprehensive Summary:** Write an insightful, multi-paragraph summary. Discuss the overall dataset, identify key trends, point out any interesting relationships between columns, and mention any potential outliers or anomalies.
 4.  **Extract Key Insights:** Distill your analysis into a list of 3-5 critical, bullet-point insights. These should be the most important takeaways for a business user.
-5.  **Propose Visualizations:** Generate the data for up to two compelling charts (Bar or Pie) to visualize the data. Ensure the data is perfectly formatted for Chart.js.
-
-{format_instructions}
+5.  **Propose Visualizations:** Generate data for up to two charts. Prefer one bar chart plus one pie chart when data allows.
 
 Language: {language}`;
 
-export async function generateDashboard(input: GenerateDashboardInput): Promise<GenerateDashboardOutput> {
+async function runGenerateDashboard(input: GenerateDashboardInput): Promise<GenerateDashboardOutput> {
   try {
     // Step 1: Extract text from file with timeout
     console.log('Extracting data from file...');
@@ -73,33 +68,27 @@ export async function generateDashboard(input: GenerateDashboardInput): Promise<
       throw new Error('Insufficient data extracted from file. Please ensure the file contains readable content.');
     }
 
-    // Step 2: Set up structured output parser
-    // Use type assertion to avoid "Type instantiation is excessively deep" error with complex nested schemas
-    // Workaround: Cast to any to bypass TypeScript's deep type inference for complex Zod schemas
-    const parser = StructuredOutputParser.fromZodSchema(GenerateDashboardOutputSchema as any);
-    const formatInstructions = parser.getFormatInstructions();
+    const prompt = `${SYSTEM_PROMPT.replace(
+      '{language}',
+      input.language === 'ar' ? 'Arabic' : 'English'
+    )}\n\nData Content (${type.toUpperCase()}):\n${cleanedText.slice(0, CONTEXT_LIMITS.DASHBOARD)}`;
 
-    // Step 3: Create prompt template
-    const promptTemplate = new PromptTemplate({
-      template: SYSTEM_PROMPT + '\n\nData Content ({type}):\n{dataContent}',
-      inputVariables: ['language', 'type', 'dataContent'],
-      partialVariables: { format_instructions: formatInstructions },
-    });
-
-    // Step 4: Format prompt with context limit
-    const prompt = await promptTemplate.format({
-      language: input.language === 'ar' ? 'Arabic' : 'English',
-      type: type.toUpperCase(),
-      dataContent: cleanedText.slice(0, CONTEXT_LIMITS.DASHBOARD), // Limit to configured chars
-    });
-
-    // Step 5: Invoke LLM with timeout
+    // Step 2: Invoke LLM with timeout
     console.log('Generating dashboard analysis...');
-    const llm = getLLM();
-    const response = await withLLMTimeout(llm.invoke(prompt), TIMEOUTS.LLM_CHAT);
+    const response = await withLLMTimeout(
+      ai.generate({
+        model: defaultModel({ temperature: 0.2, maxOutputTokens: 1400 }),
+        use: [defaultRetryMiddleware],
+        prompt,
+        output: { schema: GenerateDashboardOutputSchema },
+      }),
+      TIMEOUTS.LLM_CHAT
+    );
 
-    // Step 6: Parse structured output
-    const result = await parser.parse(response.content as string) as GenerateDashboardOutput;
+    const result = response.output;
+    if (!result) {
+      throw new Error(response.text?.trim() || 'Invalid response from AI model');
+    }
 
     console.log('Dashboard generation completed successfully');
     return result;
@@ -115,4 +104,17 @@ export async function generateDashboard(input: GenerateDashboardInput): Promise<
     
     throw new Error(`Failed to generate dashboard: ${errorMessage}`);
   }
+}
+
+export const generateDashboardFlow = ai.defineFlow(
+  {
+    name: 'generateDashboardFlow',
+    inputSchema: GenerateDashboardInputSchema,
+    outputSchema: GenerateDashboardOutputSchema,
+  },
+  runGenerateDashboard
+);
+
+export async function generateDashboard(input: GenerateDashboardInput): Promise<GenerateDashboardOutput> {
+  return generateDashboardFlow(input);
 }

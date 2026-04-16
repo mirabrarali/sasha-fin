@@ -42,7 +42,7 @@ const chatLlmMs =
 export const TIMEOUTS = {
     LLM_REQUEST: 60000, // 60 seconds — short flows (loan, summarize, etc.)
     /**
-     * Long Groq calls: chat (upload + history), financial statement upload analysis, dashboards.
+     * Long AI calls: chat (upload + history), financial statement upload analysis, dashboards.
      * Override with LLM_CHAT_TIMEOUT_MS (ms, min 10000).
      */
     LLM_CHAT: chatLlmMs,

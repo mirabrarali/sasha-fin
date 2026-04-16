@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import ChatPageClient from './chat-client';
 
-/** Allow long Groq calls when chat includes large document context (requires Vercel plan that supports it). */
+/** Allow long AI calls when chat includes large document context. */
 export const maxDuration = 120;
 
 export const metadata: Metadata = {

@@ -1,5 +1,5 @@
 /**
- * Chat page uploads: PDF, spreadsheets, journals (JRN), and common text/data formats.
+ * Chat page uploads: PDF, spreadsheets, and common text/data formats.
  */
 
 import { FILE_SIZE_LIMITS } from '@/lib/constants';
@@ -13,7 +13,6 @@ const CHAT_UPLOAD_EXTENSIONS = new Set([
     '.xls',
     '.xlsm',
     '.ods',
-    '.jrn',
     '.txt',
     '.text',
     '.log',
@@ -89,7 +88,7 @@ export function getMaxSizeForChatUpload(file: File): number {
     const n = file.name.toLowerCase();
     if (n.endsWith('.pdf')) return FILE_SIZE_LIMITS.PDF;
     if (/\.(xlsx|xls|xlsm|ods)$/.test(n)) return FILE_SIZE_LIMITS.XLSX;
-    if (/\.(csv|tsv|txt|jrn|json|xml|yaml|yml|html|htm|rtf|prn|dat|psv|tab|log|iif|qif|gl|mt940|sta|cob|swift)$/.test(n)) {
+    if (/\.(csv|tsv|txt|json|xml|yaml|yml|html|htm|rtf|prn|dat|psv|tab|log|iif|qif|gl|mt940|sta|cob|swift)$/.test(n)) {
         return FILE_SIZE_LIMITS.CSV;
     }
     return FILE_SIZE_LIMITS.DEFAULT;
@@ -121,7 +120,6 @@ export const CHAT_FILE_INPUT_ACCEPT = [
     '.xls',
     '.xlsm',
     '.ods',
-    '.jrn',
     '.txt',
     '.log',
     '.json',

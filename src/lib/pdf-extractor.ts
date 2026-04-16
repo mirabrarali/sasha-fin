@@ -1,5 +1,5 @@
 /**
- * File text extraction for PDF, spreadsheets, and plain-text formats (CSV, JRN, JSON, etc.).
+ * File text extraction for PDF, spreadsheets, and plain-text formats (CSV, JSON, etc.).
  * PDF uses a dynamic `unpdf` import so Vercel serverless does not load canvas-based PDF stacks.
  */
 
@@ -88,7 +88,7 @@ function decodeTextBuffer(buf: Buffer): string {
         }
     }
 
-    // Heuristic: alternating null bytes often indicates UTF-16 without BOM (common in text exports like .jrn).
+    // Heuristic: alternating null bytes often indicates UTF-16 without BOM (common in exported text files).
     const sample = buf.subarray(0, Math.min(buf.length, 4096));
     let oddNulls = 0;
     let evenNulls = 0;

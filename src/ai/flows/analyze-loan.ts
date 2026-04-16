@@ -1,16 +1,14 @@
 'use server';
 
 /**
- * @fileOverview Loan Analysis using LangChain + Groq
- * Migrated from Genkit to LangChain for better performance
+ * @fileOverview Loan Analysis using Genkit + Gemini
  */
 
-import { getLLM } from '@/ai/langchain';
-import { StructuredOutputParser } from '@langchain/core/output_parsers';
-import { PromptTemplate } from '@langchain/core/prompts';
-import { z } from 'zod';
+import { ai, defaultModel, defaultRetryMiddleware } from '@/ai/genkit';
+import { z } from 'genkit';
 import { loanDataCsv } from '@/data/loan_data';
 import { withLLMTimeout } from '@/lib/timeout-utils';
+import { TIMEOUTS } from '@/lib/constants';
 
 const AnalyzeLoanInputSchema = z.object({
   loanId: z.string().describe('The specific AccountNumber to analyze from the CSV data.'),
@@ -25,7 +23,7 @@ const AnalyzeLoanOutputSchema = z.object({
 });
 export type AnalyzeLoanOutput = z.infer<typeof AnalyzeLoanOutputSchema>;
 
-const SYSTEM_PROMPT = `You are an expert bank analyst. Your task is to analyze a specific customer account from a provided CSV dataset. Even though this flow is for "loan analysis", you should adapt your analysis for the provided customer account data.
+const SYSTEM_PROMPT = `You are an expert bank analyst. Your task is to analyze a specific customer account from a provided CSV dataset.
 
 Find the row in the following CSV data that corresponds to the AccountNumber: {loanId}.
 
@@ -36,8 +34,6 @@ Generate a report with the following sections, interpreting them for a general b
 2.  **prediction:** Based on the balance and account status, make a 'prediction' about the customer's financial stability. You can use terms like 'Stable', 'High Value', 'Needs Attention'. This is a proxy for loan risk prediction.
 3.  **eligibility:** Based on the analysis, provide a statement on their 'eligibility' for premium bank services or special offers. This is a proxy for loan eligibility.
 
-{format_instructions}
-
 Here is the CSV data:
 \`\`\`csv
 {csvData}
@@ -45,39 +41,30 @@ Here is the CSV data:
 
 Analyze the account with AccountNumber: {loanId}.`;
 
-export async function analyzeLoan(input: AnalyzeLoanInput): Promise<AnalyzeLoanOutput> {
+async function runAnalyzeLoan(input: AnalyzeLoanInput): Promise<AnalyzeLoanOutput> {
   try {
-    // Set up structured output parser
-    // Workaround: Cast to any to bypass TypeScript's deep type inference for complex schemas
-    const parser = StructuredOutputParser.fromZodSchema(AnalyzeLoanOutputSchema as any);
-    const formatInstructions = parser.getFormatInstructions();
-
-    // Create prompt template
-    const promptTemplate = new PromptTemplate({
-      template: SYSTEM_PROMPT,
-      inputVariables: ['loanId', 'csvData', 'language'],
-      partialVariables: { format_instructions: formatInstructions },
-    });
-
-    // Format prompt
-    const prompt = await promptTemplate.format({
-      loanId: input.loanId,
-      csvData: loanDataCsv,
-      language: input.language === 'ar' ? 'Arabic' : 'English',
-    });
-
-    // Validate loan ID format (basic validation)
     if (!input.loanId || input.loanId.trim().length === 0) {
       throw new Error('Loan ID is required and cannot be empty');
     }
 
-    // Invoke LLM with timeout
     console.log(`Analyzing loan ${input.loanId}...`);
-    const llm = getLLM();
-    const response = await withLLMTimeout(llm.invoke(prompt));
+    const response = await withLLMTimeout(
+      ai.generate({
+        model: defaultModel({ temperature: 0.15, maxOutputTokens: 800 }),
+        use: [defaultRetryMiddleware],
+        prompt: SYSTEM_PROMPT
+          .replaceAll('{loanId}', input.loanId)
+          .replace('{csvData}', loanDataCsv)
+          .replace('{language}', input.language === 'ar' ? 'Arabic' : 'English'),
+        output: { schema: AnalyzeLoanOutputSchema },
+      }),
+      TIMEOUTS.LLM_REQUEST
+    );
 
-    // Parse structured output
-    const result = await parser.parse(response.content as string) as AnalyzeLoanOutput;
+    const result = response.output;
+    if (!result) {
+      throw new Error(response.text?.trim() || 'Invalid response from AI model');
+    }
 
     console.log('Loan analysis completed successfully');
     return result;
@@ -93,4 +80,17 @@ export async function analyzeLoan(input: AnalyzeLoanInput): Promise<AnalyzeLoanO
     
     throw new Error(`Failed to analyze loan: ${errorMessage}`);
   }
+}
+
+export const analyzeLoanFlow = ai.defineFlow(
+  {
+    name: 'analyzeLoanFlow',
+    inputSchema: AnalyzeLoanInputSchema,
+    outputSchema: AnalyzeLoanOutputSchema,
+  },
+  runAnalyzeLoan
+);
+
+export async function analyzeLoan(input: AnalyzeLoanInput): Promise<AnalyzeLoanOutput> {
+  return analyzeLoanFlow(input);
 }
