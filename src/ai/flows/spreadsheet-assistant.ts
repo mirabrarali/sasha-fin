@@ -52,7 +52,7 @@ export type SpreadsheetAssistantOutput = z.infer<typeof SpreadsheetAssistantOutp
 function getGroqClient(): Groq {
   const apiKey = process.env.GROQ_SPREADSHEET_API_KEY;
   if (!apiKey) {
-    throw new Error('GROQ_SPREADSHEET_API_KEY is required for the spreadsheet AI workspace.');
+    throw new Error('Spreadsheet assistant API key is not configured for this deployment.');
   }
   return new Groq({ apiKey });
 }

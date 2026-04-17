@@ -161,7 +161,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     fileTooLargeDesc: "File size exceeds {{maxSize}}MB limit. Please upload a smaller file.",
     spreadsheetTitle: 'Spreadsheet',
     spreadsheetWorkspaceDesc:
-      'Import CSV/XLSX/JRN, edit cells directly, and use Groq AI for conversation, analysis, reports, and chart suggestions.',
+      'Import CSV/XLSX/JRN, edit cells directly, and use the built-in assistant for conversation, analysis, reports, and chart suggestions.',
     spreadsheetImport: 'Import File',
     spreadsheetExportCsv: 'Export CSV',
     spreadsheetExportXlsx: 'Export XLSX',
@@ -173,7 +173,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     spreadsheetNoDataTitle: 'No Data Loaded',
     spreadsheetNoDataDesc: 'Import a spreadsheet before running AI tasks.',
     spreadsheetAiTitle: 'Spreadsheet AI Copilot',
-    spreadsheetAiDesc: 'Use Groq models for bilingual conversation, analysis, report drafting, and suggested edits.',
+    spreadsheetAiDesc: 'Bilingual conversation, analysis, report drafting, and suggested edits—powered by a dedicated in-app model stack for this workspace.',
     spreadsheetAiEmpty: 'No conversation yet. Ask AI to analyze this sheet or propose edits.',
     spreadsheetYou: 'You',
     spreadsheetAi: 'AI',
@@ -209,7 +209,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     spreadsheetChartSuggestions: 'Chart Suggestions',
     spreadsheetChartNoData: 'No numeric data available for this suggestion.',
     spreadsheetPreviewNote: 'Showing first {{shown}} rows out of {{total}} for performance.',
-    spreadsheetFooterNote: 'Spreadsheet workspace uses Groq models independently from chat and dashboard flows.',
+    spreadsheetFooterNote: 'The spreadsheet workspace uses its own assistant configuration, separate from chat and dashboard flows.',
     chatDragDropSupported: "Supported: PDF, CSV, XLSX, XLS, JRN",
     chatInvalidFinancialFileDesc:
       "Please drop a supported file: PDF, Excel (.xlsx, .xls, .xlsm, .ods), CSV/TSV, journal (.jrn), or text/data (.txt, .json, .xml, .yaml, …).",
@@ -362,7 +362,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     fileTooLargeDesc: "يتجاوز حجم الملف حد {{maxSize}} ميجابايت. يرجى تحميل ملف أصغر.",
     spreadsheetTitle: 'الجداول',
     spreadsheetWorkspaceDesc:
-      'استورد CSV/XLSX/JRN، عدّل الخلايا مباشرة، واستخدم ذكاء Groq للمحادثة والتحليل والتقارير واقتراح الرسوم.',
+      'استورد CSV/XLSX/JRN، عدّل الخلايا مباشرة، واستخدم المساعد المدمج للمحادثة والتحليل والتقارير واقتراح الرسوم.',
     spreadsheetImport: 'استيراد ملف',
     spreadsheetExportCsv: 'تصدير CSV',
     spreadsheetExportXlsx: 'تصدير XLSX',
@@ -374,7 +374,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     spreadsheetNoDataTitle: 'لا توجد بيانات',
     spreadsheetNoDataDesc: 'يرجى استيراد جدول قبل تشغيل مهام الذكاء الاصطناعي.',
     spreadsheetAiTitle: 'مساعد الجداول الذكي',
-    spreadsheetAiDesc: 'استخدم نماذج Groq للمحادثة والتحليل وإعداد التقارير واقتراح التعديلات بلغتين.',
+    spreadsheetAiDesc: 'محادثة وتحليل وتقارير واقتراح تعديلات بلغتين—عبر مسار نماذج مخصص لهذه المساحة.',
     spreadsheetAiEmpty: 'لا توجد محادثة بعد. اطلب من الذكاء الاصطناعي تحليل الجدول أو اقتراح تعديلات.',
     spreadsheetYou: 'أنت',
     spreadsheetAi: 'الذكاء الاصطناعي',
@@ -410,7 +410,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     spreadsheetChartSuggestions: 'اقتراحات الرسوم',
     spreadsheetChartNoData: 'لا توجد بيانات رقمية كافية لهذا الاقتراح.',
     spreadsheetPreviewNote: 'يتم عرض أول {{shown}} صف من أصل {{total}} لتحسين الأداء.',
-    spreadsheetFooterNote: 'مساحة عمل الجداول تستخدم نماذج Groq بشكل مستقل عن الدردشة ولوحة التحليلات.',
+    spreadsheetFooterNote: 'مساحة الجداول تستخدم إعداد مساعد منفصل عن الدردشة ولوحة التحليلات.',
     chatDragDropSupported: "المدعومة: PDF، CSV، XLSX، XLS، JRN",
     chatInvalidFinancialFileDesc:
       "يرجى إفلات ملف مدعوم: PDF أو Excel (.xlsx أو .xls أو .xlsm أو .ods) أو CSV/TSV أو يومية (.jrn) أو نص/بيانات (.txt أو .json أو .xml أو .yaml، …).",

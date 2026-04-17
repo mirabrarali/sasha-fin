@@ -8,6 +8,8 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  ComposedChart,
+  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -38,7 +40,7 @@ import { ChatbotAvatar } from '@/components/abdullah-avatar';
 
 type Lang = 'en' | 'ar';
 
-type SlideChart = 'line' | 'bar' | 'area' | null;
+type SlideChart = 'line' | 'bar' | 'area' | 'combo' | 'stack' | null;
 
 type Slide = {
   title: string;
@@ -55,6 +57,7 @@ type AboutCopy = {
   deckHintKeys: string;
   slideLabel: (i: number, total: number) => string;
   openChat: string;
+  openSpreadsheet: string;
   scrollIntroTitle: string;
   scrollIntroLead: string;
   pillars: { title: string; desc: string }[];
@@ -70,18 +73,31 @@ type AboutCopy = {
   slides: Slide[];
 };
 
-const TREND_DATA = [
-  { label: 'Q1', value: 38 },
-  { label: 'Q2', value: 52 },
-  { label: 'Q3', value: 47 },
-  { label: 'Q4', value: 64 },
-];
-
 const MIX_DATA = [
   { name: 'Ops', value: 28 },
   { name: 'Risk', value: 22 },
   { name: 'RM', value: 18 },
   { name: 'Finance', value: 32 },
+  { name: 'Treasury', value: 24 },
+  { name: 'Compliance', value: 20 },
+];
+
+/** Illustrative quarterly KPIs for deck storytelling (not live bank figures). */
+const QUARTERLY_KPIS = [
+  { quarter: 'Q1', revenue: 42.1, expense: 28.4, netMargin: 13.7 },
+  { quarter: 'Q2', revenue: 48.6, expense: 30.1, netMargin: 18.5 },
+  { quarter: 'Q3', revenue: 46.2, expense: 29.7, netMargin: 16.5 },
+  { quarter: 'Q4', revenue: 55.4, expense: 31.9, netMargin: 23.5 },
+  { quarter: 'Q1+1', revenue: 58.0, expense: 32.8, netMargin: 25.2 },
+  { quarter: 'Q2+1', revenue: 61.3, expense: 33.5, netMargin: 27.8 },
+];
+
+/** Illustrative stacked mix by quarter for presentation slides. */
+const BU_MIX_QUARTERS = [
+  { quarter: 'Q1', retail: 22, corporate: 18, riskOps: 10, treasury: 8 },
+  { quarter: 'Q2', retail: 24, corporate: 19, riskOps: 11, treasury: 9 },
+  { quarter: 'Q3', retail: 23, corporate: 21, riskOps: 12, treasury: 9 },
+  { quarter: 'Q4', retail: 26, corporate: 22, riskOps: 13, treasury: 10 },
 ];
 
 const COPY: Record<Lang, AboutCopy> = {
@@ -93,6 +109,7 @@ const COPY: Record<Lang, AboutCopy> = {
     deckHintKeys: '← → to move · Esc to close',
     slideLabel: (i, total) => `Slide ${i + 1} of ${total}`,
     openChat: 'Open chat workspace',
+    openSpreadsheet: 'Open spreadsheet workspace',
     scrollIntroTitle: 'Built for bank business teams',
     scrollIntroLead:
       'Banking Chatbot is a focused workspace where relationship managers, operations, risk, and finance leaders get faster answers from the same documents and numbers they already trust—without changing core systems overnight.',
@@ -159,8 +176,10 @@ const COPY: Record<Lang, AboutCopy> = {
         title: 'Banking Chatbot',
         subtitle: 'Executive briefing for bank business leaders',
         bullets: [
-          'One assistant for documents, data, and dialogue—aligned to how banks already work.',
-          'Branded simply as Banking Chatbot; ready for internal rollout narratives.',
+          'A single workspace where documents, numbers, and natural-language dialogue stay aligned with how relationship, operations, risk, and finance teams already collaborate.',
+          'Outputs are composed for committees and client conversations—charts, tables, and narratives you can walk through live instead of stitching fragments by hand.',
+          'Presentation mode delivers a calm full-screen storyline for boards and huddles; chat and spreadsheet areas stay available when colleagues stress-test real files.',
+          'Named simply Banking Chatbot so internal rollout stays focused on workflow value rather than external vendor messaging.',
         ],
         chart: null,
       },
@@ -168,62 +187,120 @@ const COPY: Record<Lang, AboutCopy> = {
         title: 'Why banks adopt it now',
         subtitle: 'Speed without sacrificing control',
         bullets: [
-          'Compress weeks of reading into hours of guided review.',
-          'Keep humans in charge while the assistant handles volume and repetition.',
+          'Compress weeks of first-pass reading into hours of guided review while humans retain approval rights on every material decision.',
+          'Repeatable prompts and institutional phrasing reduce drift between front office, operations, and control functions.',
+          'Lean inference footprint scales daily usage without oversized processing estates sized for consumer experiments.',
+          'Clear trails from question to cited cells or passages make exceptions easier to defend with supervisors and internal audit.',
         ],
         chart: 'line',
       },
       {
-        title: 'Chat that carries the file with it',
-        subtitle: 'Purpose-built for banking conversations',
+        title: 'Operational truth RM and control teams share',
+        subtitle: 'From reconciliations to committee packets',
         bullets: [
-          'Natural-language Q&A across PDFs, CSV, Excel, journals, and text extracts.',
-          'Inline charts when teams ask for a view—ideal for huddles and committees.',
+          'Relationship managers stay tethered to the same extracts, ledgers, and commentary drafts that operations and finance validate.',
+          'Risk and compliance reviewers see structured summaries with pointers back to underlying rows or pages—less ambiguity about what changed.',
+          'Period-over-period narratives explain drivers, not only deltas on a dashboard, so leadership can skim a storyline before the deep dive.',
+          'Anomalies and concentration shifts surface with enough context to decide whether they warrant a policy exception or data cleansing.',
         ],
         chart: 'area',
       },
       {
-        title: 'Analytics leadership can skim',
-        subtitle: 'From metrics to meaning',
+        title: 'Chat workspace',
+        subtitle: 'Upload, ask, and iterate in one thread',
         bullets: [
-          'Trend views and concentration stories that complement existing BI stacks.',
-          'Narratives that explain what moved—not just what printed on a page.',
+          'Carry PDFs, CSV exports, Excel extracts, journals, and policy PDFs side by side while the assistant answers in plain language.',
+          'Request inline charts when you need a visual anchor for a morning huddle or steering committee without rebuilding a BI workbook.',
+          'Threads preserve decision context so specialists can pick up a file mid-review without replaying verbal handoffs.',
+          'Responses stay tied to the documents you supplied, reducing speculation beyond your approved material.',
+        ],
+        chart: 'combo',
+      },
+      {
+        title: 'Data analytics',
+        subtitle: 'Complement—not replace—your BI stack',
+        bullets: [
+          'Slice concentration, vintage behaviour, and simple scenario views in minutes when leadership asks an unplanned question.',
+          'Summaries translate metrics into language executives recognize, closing the gap between what printed and what actually moved.',
+          'Parallel exploration lets risk and RM desks iterate on the same export concurrently without duplicating sensitive paths.',
+          'Outputs slot alongside existing scorecards so teams do not rip out governance models overnight.',
         ],
         chart: 'bar',
       },
       {
-        title: 'Spreadsheet-heavy operations',
-        subtitle: 'Accuracy at branch and HQ scale',
+        title: 'Dedicated spreadsheet workspace',
+        subtitle: 'Grids you govern, answers you can trace',
         bullets: [
-          'Ground answers in the rows you provide—ideal for operations and finance control.',
-          'Reduce copy‑paste errors between Excel and email by answering inside the workspace.',
+          'Open large operational or finance tables in a purpose-built surface with filters, formatting, and familiar grid navigation.',
+          'Ask the assistant to validate ranges, explain outliers, or draft variance commentary tied to the exact cells you highlight.',
+          'Chart builder turns selected columns into board-ready visuals without round-tripping through desktop publishing.',
+          'Exports and summaries stay inside your controlled workspace so sensitive numbers are less likely to leak through ad-hoc screenshots.',
         ],
-        chart: 'bar',
+        chart: 'stack',
+      },
+      {
+        title: 'From rows to review-ready narratives',
+        subtitle: 'Imports, charts, and packaged summaries',
+        bullets: [
+          'Bring month-end closings, limit schedules, or branch KPI packs; keep structure intact while you annotate and narrate.',
+          'Cross-foot checks and plain-language explanations help controllers sign off faster when time is short before filing.',
+          'Packaged narrative summaries carry bank wording conventions so committees receive coherent packets, not scattered highlights.',
+          'Cell-level references in generated text give reviewers a fast path back to the evidence behind each sentence.',
+        ],
+        chart: 'combo',
+      },
+      {
+        title: 'Analytics leadership can skim',
+        subtitle: 'Board-friendly views on demand',
+        bullets: [
+          'Directional trends, expense discipline, and margin quality appear in visuals tuned for a single glance in large rooms.',
+          'Colour and scale defaults follow accessible patterns so packs remain legible when projected for wide audiences.',
+          'When questions arise mid-meeting, presenters pivot to supporting detail without reopening ten source files.',
+          'Illustrative charts in this deck are labelled as storytelling—not live bank figures—mirroring in-product disclosure patterns.',
+        ],
+        chart: 'line',
       },
       {
         title: 'Automation map',
         subtitle: 'Where teams reclaim capacity',
         bullets: [
-          'First-line document triage, MIS commentary drafts, and policy explainers.',
-          'Fewer swivel-chair moments between risk, ops, and relationship coverage.',
+          'First-line document triage, MIS commentary drafts, and policy explainers replace repetitive reading cycles.',
+          'Fewer swivel-chair moments between risk, operations, and relationship coverage because everyone references the same outputs.',
+          'Exception queues shrink when routine checks run consistently before human reviewers see a file.',
+          'Specialists spend judgment time on outliers while the assistant handles volume and formatting hygiene.',
         ],
-        chart: 'line',
+        chart: 'bar',
       },
       {
         title: 'Secure, efficient deployment',
         subtitle: 'Designed for regulated environments',
         bullets: [
-          'In-house and on‑premises options keep sensitive workloads inside your boundary.',
-          'Lean infrastructure footprint—built for sustained production, not lab demos.',
+          'In-house and on‑premises options keep sensitive workloads inside your boundary when policy requires it.',
+          'Segregated paths, monitoring hooks, and change-control-friendly delivery match bank security expectations.',
+          'Lean footprint targets sustained production banking loads rather than one-off lab demonstrations.',
+          'Operational playbooks cover rollback, key rotation, and model refresh without surprising the business.',
         ],
         chart: null,
+      },
+      {
+        title: 'Bilingual and regional fit',
+        subtitle: 'Same storyline in English and Arabic',
+        bullets: [
+          'Toggle language without rebuilding decks so regional hubs and head office stay aligned on terminology.',
+          'Right-to-left layout preserves readability for Arabic audiences during walkthroughs and training.',
+          'Committee-ready phrasing adapts to local regulatory vocabulary while keeping numeric references consistent.',
+          'Presentation mode respects the active language so screen shares stay professional in either direction.',
+        ],
+        chart: 'stack',
       },
       {
         title: 'Next step',
         subtitle: 'Take colleagues through the experience',
         bullets: [
-          'Open the chat workspace with a sample portfolio file or anonymized export.',
-          'Use presentation mode anytime you need a calm, full-screen storyline.',
+          'Open the chat workspace with a sample portfolio file or anonymized export and walk through one real question end to end.',
+          'Load a spreadsheet extract in the dedicated grid workspace and ask for variance commentary tied to highlighted cells.',
+          'Use presentation mode anytime you need a calm, full-screen storyline for leadership or branch champions.',
+          'Capture feedback on missing controls so delivery teams can harden the rollout before broad production.',
         ],
         chart: null,
       },
@@ -237,6 +314,7 @@ const COPY: Record<Lang, AboutCopy> = {
     deckHintKeys: '← → للتنقل · Esc للإغلاق',
     slideLabel: (i, total) => `الشريحة ${i + 1} من ${total}`,
     openChat: 'فتح مساحة المحادثة',
+    openSpreadsheet: 'فتح مساحة الجداول',
     scrollIntroTitle: 'مصمم لفرق الأعمال في المصارف',
     scrollIntroLead:
       'المساعد المصرفي (Banking Chatbot) مساحة عمل موحّدة يستخدم فيها مدراء العلاقات والعمليات والمخاطر والمالية لغة طبيعية على نفس المستندات والأرقام المعتمدة—دون إعادة هيكلة أنظمة البنك دفعة واحدة.',
@@ -303,8 +381,10 @@ const COPY: Record<Lang, AboutCopy> = {
         title: 'Banking Chatbot',
         subtitle: 'موجز تنفيذي لقادة الأعمال المصرفية',
         bullets: [
-          'مساعد واحد للمستندات والبيانات والحوار—قريب من أسلوب عمل المصارف اليوم.',
-          'علامة موحّدة «Banking Chatbot»؛ جاهز لسرد داخلي منظم.',
+          'مساحة واحدة تجمع المستندات والأرقام والحوار بلغة طبيعية بما يتوافق مع تعاون علاقات العملاء والعمليات والمخاطر والمالية.',
+          'مخرجات مؤلفة للجان ولقاءات العملاء—جداول ورسوم وملخصات يمكن سردها مباشرة دون تجميع شظايا يدويًا.',
+          'وضع العرض يمنح سردًا هادئًا بملء الشاشة لمجالس الإدارة والاجتماعات السريعة، مع بقاء مساحتي المحادثة والجداول جاهزتين لاختبار ملفات حقيقية.',
+          'تسمية موحّدة «Banking Chatbot» ليبقى التركيز على قيمة سير العمل لا على تسويق طرف خارجي.',
         ],
         chart: null,
       },
@@ -312,62 +392,120 @@ const COPY: Record<Lang, AboutCopy> = {
         title: 'لماذا يعتمد البنك عليه الآن',
         subtitle: 'سرعة مع الحفاظ على الضوابط',
         bullets: [
-          'ضغط أسابيع القراءة في ساعات مراجعة موجّهة.',
-          'البشر يقررون بينما المساعد يتولى الحجم والتكرار.',
+          'ضغط أسابيع القراءة الأولية في ساعات مراجعة موجّهة مع بقاء قرارات المواد المهمة بيد الإنسان.',
+          'قوالب متكررة وصياغة مؤسسية تقلل انحراف الرسائل بين الواجهة الأمامية والعمليات والرقابة.',
+          'بصمة استدلال خفيفة تسمح بتوسيع الاستخدام اليومي دون بنية معالجة مبالغ فيها مخصصة للمستهلك.',
+          'مسارات واضحة من السؤال إلى الخلايا أو الفقرات المستشهد بها تسهّل الدفاع عن الاستثناءات أمام المشرفين والتدقيق الداخلي.',
         ],
         chart: 'line',
       },
       {
-        title: 'محادثة تحمل الملف معها',
-        subtitle: 'مصمم لمحادثات مصرفية',
+        title: 'حقيقة تشغيلية يتقاسمها RM والرقابة',
+        subtitle: 'من التسويات إلى حزم اللجان',
         bullets: [
-          'أسئلة بلغة طبيعية على PDF وCSV وExcel واليوميات والنصوص المستخرجة.',
-          'رسوم داخل المحادثة عند الطلب—مناسبة للجان والاجتماعات السريعة.',
+          'مدراء العلاقات يبقون مرتبطين بنفس المستخرجات والدفاتر ومسودات التعليق التي تعتمدها العمليات والمالية.',
+          'مراجعو المخاطر والالتزام يرون ملخصات منظمة مع إشارات إلى الصفوف أو الصفحات الأساسية—أقل غموضًا حول ما تغيّر.',
+          'سرد فترة بفترة يشرح المحفزات لا الفروق فقط على لوحة المؤشرات ليلخص القيادة قبل الغوص العميق.',
+          'الشذوذ وتحولات التركز تظهر بسياق يكفي لاتخاذ قرار الاستثناء السياسي أو تنقية البيانات.',
         ],
         chart: 'area',
       },
       {
-        title: 'تحليلات يلخصها القادة',
-        subtitle: 'من المؤشرات إلى المعنى',
+        title: 'مساحة المحادثة',
+        subtitle: 'حمّل، اسأل، كرّر في خيط واحد',
         bullets: [
-          'مناظر اتجاه وتركز تكمّل منصات ذكاء الأعمال القائمة.',
-          'سرد يشرح ما تغيّر—لا يقتصر على ما طُبع في الصفحة.',
+          'تعامل مع PDF وCSV وExcel واليوميات وسياسات PDF جنبًا إلى جنب مع إجابات بلغة يومية.',
+          'اطلب رسومًا داخل المحادثة عند الحاجة لتثبيت بصري في اجتماع صباحي أو لجنة دون إعادة بناء مصنف ذكاء أعمال.',
+          'الخيوط تحفظ سياق القرار ليستأنف الخبراء المراجعة دون إعادة تلخيص شفهي.',
+          'الإجابات مرتبطة بالمستندات التي زودتم بها لتقليل الاجتهاد خارج المواد المعتمدة.',
+        ],
+        chart: 'combo',
+      },
+      {
+        title: 'تحليلات البيانات',
+        subtitle: 'تكمّل منصات ذكاء الأعمال دون استبدالها',
+        bullets: [
+          'قطع تركز وسلوك أعمار وسيناريوهات بسيطة في دقائق عند أسئلة غير مخططة من القيادة.',
+          'ملخصات تترجم المؤشرات إلى لغة تنفيذية تغلق الفجوة بين ما طُبع وما تحرك فعليًا.',
+          'استكشاف متوازٍ لمكاتب المخاطر وعلاقات العملاء على نفس التصدير دون تكرار مسارات حساسة.',
+          'مخرجات تنسجم مع لوحات القياس القائمة دون إزالة نماذج الحوكمة دفعة واحدة.',
         ],
         chart: 'bar',
       },
       {
-        title: 'عمليات تعتمد على الجداول',
-        subtitle: 'دقة على مستوى الفرع والمركز',
+        title: 'مساحة جداول مخصصة',
+        subtitle: 'جداول تحكمون بها وإجابات قابلة للتتبع',
         bullets: [
-          'إجابات مبنية على الصفوف التي تزودون بها—مناسبة للعمليات والرقابة المالية.',
-          'تقليل أخطاء النسخ بين Excel والبريد عبر الإجابة داخل المساحة.',
+          'افتح جداول عمليات أو مالية كبيرة في واجهة مخصصة مع تصفية وتنسيق وتنقل شبكي مألوف.',
+          'اطلب من المساعد التحقق من النطاقات أو تفسير الشواذ أو صياغة تعليق تباين مرتبط بالخلايا التي تبرزونها.',
+          'منشئ الرسوم يحوّل الأعمدة المختارة إلى مناظر جاهزة للمجلس دون التنقل بين أدوات نشر سطح المكتب.',
+          'المخرجات والملخصات تبقى داخل المساحة المحكومة لتقليل تسرّب أرقام حساسة عبر لقطات عشوائية.',
         ],
-        chart: 'bar',
+        chart: 'stack',
+      },
+      {
+        title: 'من الصفوف إلى سرد جاهز للمراجعة',
+        subtitle: 'استيراد ورسوم وملخصات معبأة',
+        bullets: [
+          'أحضروا إغلاقات الشهر أو جداول الحدود أو حزم مؤشرات الفروع مع الحفاظ على البنية أثناء التعليق والسرد.',
+          'فحوصات توازن وتفسيرات بلغة بسيطة تسرّع توقيع المراقب المالي عند ضيق الوقت قبل الإيداع.',
+          'ملخصات سردية معبأة بصياغة بنكية لتصل اللجان بحزم متماسكة لا بشظايا متفرقة.',
+          'إشارات على مستوى الخلية في النص المولّد تعطي المراجعين مسارًا سريعًا إلى الدليل وراء كل جملة.',
+        ],
+        chart: 'combo',
+      },
+      {
+        title: 'تحليلات يلخصها القادة',
+        subtitle: 'مناظر صديقة للمجلس عند الطلب',
+        bullets: [
+          'اتجاهات اتجاهية وانضباط مصاريف وجودة هوامش في رسوم مضبوطة لنظرة واحدة في قاعات كبيرة.',
+          'اختيارات لون ومقياس تتبع أنماطًا سهلة القراءة عند العرض على شاشات واسعة.',
+          'عند أسئلة أثناء الاجتماع ينتقل المقدّم إلى التفاصيل الداعمة دون فتح عشرة ملفات مصدر.',
+          'الرسوم التوضيحية هنا مسمّاة كسرد قصصي—وليست أرقام بنك حية—بما يعكس أنماط الإفصاح داخل المنتج.',
+        ],
+        chart: 'line',
       },
       {
         title: 'خريطة الأتمتة',
         subtitle: 'أين تستعيد الفرق الطاقة',
         bullets: [
-          'فرز أولي للمستندات ومسودات تعليق MIS وشرح السياسات.',
-          'تقليل التنقل بين المخاطر والعمليات وتغطية العملاء.',
+          'فرز أولي للمستندات ومسودات تعليق MIS وشرح السياسات يحل محل دورات قراءة متكررة.',
+          'تقليل التنقل بين المخاطر والعمليات والتغطية لأن الجميع يشير إلى نفس المخرجات.',
+          'طوابير الاستثناءات تنكمش عندما تمر الفحوصات الروتينية بانتظام قبل وصول الملف للمراجع البشري.',
+          'يخصص الخبراء وقتهم للشواذ بينما المساعد يتولى الحجم ونظافة التنسيق.',
         ],
-        chart: 'line',
+        chart: 'bar',
       },
       {
         title: 'نشر آمن وفعّال',
         subtitle: 'للبيئات الخاضعة للرقابة',
         bullets: [
-          'خيارات داخلية وعلى البنية الخاصة تحافظ على الأحمال الحساسة داخل نطاقكم.',
-          'بنية خفيفة—مصممة للإنتاج المستدام لا للتجارب المخبرية.',
+          'خيارات داخلية وعلى البنية الخاصة تحافظ على الأحمال الحساسة داخل نطاقكم عندما تفرض السياسة ذلك.',
+          'مسارات معزولة وخطافات مراقبة وتسليم يتوافق مع ضبط التغيير يلائم توقعات أمن المصارف.',
+          'بصمة خفيفة تستهدف أعباء الإنتاج المصرفي المستدام لا عروض المختبر لمرة واحدة.',
+          'أدلة تشغيل تغطي التراجع وتدوير المفاتيح وتحديث النماذج دون مفاجأة الأعمال.',
         ],
         chart: null,
+      },
+      {
+        title: 'ثنائية اللغة والملاءمة الإقليمية',
+        subtitle: 'نفس السرد بالعربية والإنجليزية',
+        bullets: [
+          'تبديل اللغة دون إعادة بناء الشرائح ليبقى الحوكام متسقًا بين المراكز الإقليمية والمركز.',
+          'تخطيط من اليمين لليسار يحافظ على وضوح العربية أثناء العروض والتدريب.',
+          'صياغة جاهزة للجان تتكيف مع المصطلحات التنظيمية المحلية مع ثبات المراجع الرقمية.',
+          'وضع العرض يحترم اللغة النشطة لتبقى المشاركة الشاشة مهنية في الاتجاهين.',
+        ],
+        chart: 'stack',
       },
       {
         title: 'الخطوة التالية',
         subtitle: 'مرّر الزملاء على التجربة',
         bullets: [
-          'افتح مساحة المحادثة بملف محفظة تجريبي أو تصدير مجهّل.',
-          'استخدم وضع العرض متى احتجتم سردًا هادئًا بملء الشاشة.',
+          'افتح مساحة المحادثة بملف محفظة تجريبي أو تصدير مجهّل وامشِ سؤالًا حقيقيًا من البداية للنهاية.',
+          'حمّل تصديرًا جدوليًا في مساحة الشبكة المخصصة واطلب تعليق تباين مرتبطًا بالخلايا المبرزة.',
+          'استخدم وضع العرض متى احتجتم سردًا هادئًا بملء الشاشة للقيادة أو أبطال الفروع.',
+          'دوّن ملاحظات على الضوابط الناقصة لتقوية الإطلاق قبل الإنتاج الواسع.',
         ],
         chart: null,
       },
@@ -389,16 +527,34 @@ function DeckChart({ chart, dark }: { chart: Exclude<SlideChart, null>; dark: bo
     fontSize: 12,
   };
 
+  const chartWrap = 'mt-8 h-60 w-full md:h-64';
+
   if (chart === 'line') {
     return (
-      <div className="mt-8 h-52 w-full">
+      <div className={chartWrap}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={TREND_DATA} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          <LineChart data={QUARTERLY_KPIS} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={grid} opacity={0.6} />
-            <XAxis dataKey="label" tick={{ fill: axis, fontSize: 11 }} axisLine={{ stroke: grid }} />
-            <YAxis tick={{ fill: axis, fontSize: 11 }} axisLine={{ stroke: grid }} width={32} />
+            <XAxis dataKey="quarter" tick={{ fill: axis, fontSize: 11 }} axisLine={{ stroke: grid }} />
+            <YAxis tick={{ fill: axis, fontSize: 11 }} axisLine={{ stroke: grid }} width={36} />
             <Tooltip contentStyle={tooltipStyle} />
-            <Line type="monotone" dataKey="value" stroke={dark ? '#38bdf8' : 'hsl(var(--primary))'} strokeWidth={2} dot={false} />
+            <Legend wrapperStyle={{ fontSize: 11, color: axis }} />
+            <Line
+              type="monotone"
+              dataKey="revenue"
+              name="Revenue"
+              stroke={dark ? '#38bdf8' : 'hsl(var(--primary))'}
+              strokeWidth={2}
+              dot={{ r: 3, strokeWidth: 0 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="expense"
+              name="Expense"
+              stroke={dark ? '#f472b6' : 'hsl(var(--chart-2))'}
+              strokeWidth={2}
+              dot={{ r: 3, strokeWidth: 0 }}
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -407,35 +563,92 @@ function DeckChart({ chart, dark }: { chart: Exclude<SlideChart, null>; dark: bo
 
   if (chart === 'area') {
     return (
-      <div className="mt-8 h-52 w-full">
+      <div className={chartWrap}>
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={TREND_DATA} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          <AreaChart data={QUARTERLY_KPIS} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <defs>
-              <linearGradient id="aboutArea" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="aboutAreaDeck" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={dark ? '#34d399' : 'hsl(var(--primary))'} stopOpacity={0.35} />
                 <stop offset="100%" stopColor={dark ? '#34d399' : 'hsl(var(--primary))'} stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke={grid} opacity={0.6} />
-            <XAxis dataKey="label" tick={{ fill: axis, fontSize: 11 }} axisLine={{ stroke: grid }} />
-            <YAxis tick={{ fill: axis, fontSize: 11 }} axisLine={{ stroke: grid }} width={32} />
+            <XAxis dataKey="quarter" tick={{ fill: axis, fontSize: 11 }} axisLine={{ stroke: grid }} />
+            <YAxis tick={{ fill: axis, fontSize: 11 }} axisLine={{ stroke: grid }} width={36} />
             <Tooltip contentStyle={tooltipStyle} />
-            <Area type="monotone" dataKey="value" stroke={dark ? '#34d399' : 'hsl(var(--primary))'} fill="url(#aboutArea)" strokeWidth={2} />
+            <Legend wrapperStyle={{ fontSize: 11, color: axis }} />
+            <Area
+              type="monotone"
+              dataKey="netMargin"
+              name="Net margin"
+              stroke={dark ? '#34d399' : 'hsl(var(--primary))'}
+              fill="url(#aboutAreaDeck)"
+              strokeWidth={2}
+            />
           </AreaChart>
         </ResponsiveContainer>
       </div>
     );
   }
 
+  if (chart === 'combo') {
+    return (
+      <div className={chartWrap}>
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={QUARTERLY_KPIS} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={grid} opacity={0.6} />
+            <XAxis dataKey="quarter" tick={{ fill: axis, fontSize: 11 }} axisLine={{ stroke: grid }} />
+            <YAxis yAxisId="left" tick={{ fill: axis, fontSize: 11 }} axisLine={{ stroke: grid }} width={36} />
+            <YAxis yAxisId="right" orientation="right" tick={{ fill: axis, fontSize: 11 }} axisLine={{ stroke: grid }} width={36} />
+            <Tooltip contentStyle={tooltipStyle} />
+            <Legend wrapperStyle={{ fontSize: 11, color: axis }} />
+            <Bar yAxisId="left" dataKey="revenue" name="Revenue" fill={dark ? '#38bdf8' : 'hsl(var(--primary))'} radius={[4, 4, 0, 0]} maxBarSize={28} />
+            <Bar yAxisId="left" dataKey="expense" name="Expense" fill={dark ? '#475569' : 'hsl(var(--muted-foreground))'} radius={[4, 4, 0, 0]} maxBarSize={28} />
+            <Line
+              yAxisId="right"
+              type="monotone"
+              dataKey="netMargin"
+              name="Net margin"
+              stroke={dark ? '#fbbf24' : 'hsl(var(--chart-4))'}
+              strokeWidth={2}
+              dot={{ r: 3, strokeWidth: 0 }}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+
+  if (chart === 'stack') {
+    return (
+      <div className={chartWrap}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={BU_MIX_QUARTERS} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={grid} opacity={0.6} />
+            <XAxis dataKey="quarter" tick={{ fill: axis, fontSize: 11 }} axisLine={{ stroke: grid }} />
+            <YAxis tick={{ fill: axis, fontSize: 11 }} axisLine={{ stroke: grid }} width={36} />
+            <Tooltip contentStyle={tooltipStyle} />
+            <Legend wrapperStyle={{ fontSize: 11, color: axis }} />
+            <Bar dataKey="retail" name="Retail" stackId="mix" fill={dark ? '#38bdf8' : 'hsl(var(--primary))'} />
+            <Bar dataKey="corporate" name="Corporate" stackId="mix" fill={dark ? '#818cf8' : 'hsl(var(--chart-2))'} />
+            <Bar dataKey="riskOps" name="Risk & ops" stackId="mix" fill={dark ? '#34d399' : 'hsl(var(--chart-3))'} />
+            <Bar dataKey="treasury" name="Treasury" stackId="mix" fill={dark ? '#fbbf24' : 'hsl(var(--chart-4))'} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+
   return (
-    <div className="mt-8 h-52 w-full">
+    <div className={chartWrap}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={MIX_DATA} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={grid} opacity={0.6} />
           <XAxis dataKey="name" tick={{ fill: axis, fontSize: 11 }} axisLine={{ stroke: grid }} />
           <YAxis tick={{ fill: axis, fontSize: 11 }} axisLine={{ stroke: grid }} width={32} />
           <Tooltip contentStyle={tooltipStyle} />
-          <Bar dataKey="value" fill={dark ? '#a78bfa' : 'hsl(var(--primary))'} radius={[6, 6, 0, 0]} />
+          <Legend wrapperStyle={{ fontSize: 10, color: axis }} />
+          <Bar dataKey="value" name="Share" fill={dark ? '#a78bfa' : 'hsl(var(--primary))'} radius={[6, 6, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -453,18 +666,13 @@ function ScrollIllustration() {
   return (
     <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-card via-background to-muted/40 p-6 shadow-sm">
       <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/10 blur-3xl" aria-hidden />
-      <div className="relative h-56 w-full">
+      <div className="relative h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={TREND_DATA} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id="scrollArea" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
-                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-              </linearGradient>
-            </defs>
+          <ComposedChart data={QUARTERLY_KPIS} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis dataKey="label" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
-            <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} width={28} />
+            <XAxis dataKey="quarter" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
+            <YAxis yAxisId="left" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} width={32} />
+            <YAxis yAxisId="right" orientation="right" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} width={32} />
             <Tooltip
               contentStyle={{
                 backgroundColor: 'hsl(var(--card))',
@@ -473,11 +681,21 @@ function ScrollIllustration() {
                 fontSize: 12,
               }}
             />
-            <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" fill="url(#scrollArea)" strokeWidth={2} />
-          </AreaChart>
+            <Legend wrapperStyle={{ fontSize: 11, color: 'hsl(var(--muted-foreground))' }} />
+            <Bar yAxisId="left" dataKey="revenue" name="Revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={32} />
+            <Line
+              yAxisId="right"
+              type="monotone"
+              dataKey="netMargin"
+              name="Net margin"
+              stroke="hsl(var(--chart-4))"
+              strokeWidth={2}
+              dot={{ r: 3, strokeWidth: 0 }}
+            />
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <p className="mt-4 text-center text-xs text-muted-foreground">Illustrative trend — for storytelling, not live bank figures.</p>
+      <p className="mt-4 text-center text-xs text-muted-foreground">Illustrative KPIs — for storytelling, not live bank figures.</p>
     </div>
   );
 }
@@ -598,6 +816,9 @@ export default function AboutPageClient() {
                 <Button asChild size="lg" className="rounded-xl px-8 font-semibold shadow-md">
                   <Link href="/chat">{s.openChat}</Link>
                 </Button>
+                <Button asChild size="lg" variant="outline" className="rounded-xl px-8 font-semibold">
+                  <Link href="/spreadsheet">{s.openSpreadsheet}</Link>
+                </Button>
                 <Button variant="outline" size="lg" className="rounded-xl gap-2 font-semibold sm:hidden" onClick={() => void enterPresent()}>
                   <Maximize2 className="h-4 w-4" aria-hidden />
                   {s.presentCta}
@@ -709,6 +930,9 @@ export default function AboutPageClient() {
               <Button asChild size="lg" variant="secondary" className="rounded-xl px-8 font-semibold">
                 <Link href="/chat">{s.openChat}</Link>
               </Button>
+              <Button asChild size="lg" variant="secondary" className="rounded-xl px-8 font-semibold">
+                <Link href="/spreadsheet">{s.openSpreadsheet}</Link>
+              </Button>
               <Button size="lg" variant="outline" className="rounded-xl gap-2 font-semibold" onClick={() => void enterPresent()}>
                 <Maximize2 className="h-4 w-4" aria-hidden />
                 {s.presentCta}
@@ -779,6 +1003,14 @@ export default function AboutPageClient() {
               <div className="flex flex-col justify-between gap-2 text-xs text-slate-400 sm:flex-row sm:items-center">
                 <span>{s.deckHint}</span>
                 <span className="text-slate-500">{s.deckHintKeys}</span>
+              </div>
+              <div className="flex flex-wrap justify-center gap-2 pt-1">
+                <Button asChild type="button" variant="secondary" size="sm" className="gap-1.5 bg-white/10 text-white hover:bg-white/20">
+                  <Link href="/chat">{s.openChat}</Link>
+                </Button>
+                <Button asChild type="button" variant="secondary" size="sm" className="gap-1.5 bg-white/10 text-white hover:bg-white/20">
+                  <Link href="/spreadsheet">{s.openSpreadsheet}</Link>
+                </Button>
               </div>
             </div>
           </div>
