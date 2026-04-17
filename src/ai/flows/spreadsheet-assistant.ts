@@ -114,16 +114,39 @@ function buildUserPayload(input: SpreadsheetAssistantInput): string {
 function parseAssistantOutput(raw: string, modelUsed: string): SpreadsheetAssistantOutput {
   const text = raw.trim();
   const candidate = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1] ?? text;
-  try {
-    const parsed = JSON.parse(candidate);
-    const checked = SpreadsheetAssistantOutputSchema.safeParse({
-      ...parsed,
+  const tryParse = (value: string): SpreadsheetAssistantOutput | null => {
+    try {
+      const parsed = JSON.parse(value);
+      const checked = SpreadsheetAssistantOutputSchema.safeParse({
+        ...parsed,
+        modelUsed,
+      });
+      if (checked.success) return checked.data;
+    } catch {
+      // ignore
+    }
+    return null;
+  };
+
+  const strict = tryParse(candidate);
+  if (strict) return strict;
+
+  const normalizedSingleQuoted = candidate
+    .replace(/([{,]\s*)'([^']+?)'\s*:/g, '$1"$2":')
+    .replace(/:\s*'([^'\\]*(?:\\.[^'\\]*)*)'/g, (_m, group) => `: "${group.replace(/"/g, '\\"')}"`);
+  const normalized = tryParse(normalizedSingleQuoted);
+  if (normalized) return normalized;
+
+  const replyMatch =
+    candidate.match(/["']reply["']\s*:\s*"([\s\S]*?)"\s*(?:,|})/i) ??
+    candidate.match(/["']reply["']\s*:\s*'([\s\S]*?)'\s*(?:,|})/i);
+  if (replyMatch?.[1]) {
+    return {
+      reply: replyMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').trim(),
       modelUsed,
-    });
-    if (checked.success) return checked.data;
-  } catch {
-    // fall through to safe fallback
+    };
   }
+
   return {
     reply: text || 'I could not generate a structured response. Please try a more specific instruction.',
     modelUsed,

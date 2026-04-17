@@ -22,7 +22,6 @@ import {
   MessageSquare,
   Bot,
   Loader2,
-  Wand2,
   FileText,
   BarChart3,
   CheckCircle2,
@@ -36,6 +35,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/context/language-context';
 import {
@@ -52,8 +61,16 @@ const Pie = dynamic(() => import('react-chartjs-2').then((mod) => mod.Pie), { ss
 type Row = Record<string, string>;
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 type AssistantMode = 'conversation' | 'analysis' | 'report' | 'chart';
+type RenderedChart = {
+  id: string;
+  type: 'bar' | 'line' | 'pie';
+  title: string;
+  xKey: string;
+  yKey: string;
+};
 
 const FILE_ACCEPT = '.xlsx,.xls,.csv,.tsv,.txt,.json,.jrn';
+const CHART_COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
 
 function normalizeCellValue(v: unknown): string {
   if (v == null) return '';
@@ -108,10 +125,86 @@ function parseJrnLikeText(text: string): { columns: string[]; rows: Row[] } {
   return parseDelimitedText(text);
 }
 
-function extractNumericSeries(rows: Row[], key: string): number[] {
-  return rows
-    .map((row) => Number(String(row[key] ?? '').replace(/,/g, '')))
-    .filter((value) => Number.isFinite(value));
+async function generateAndDownloadPdf(element: HTMLElement, fileName: string): Promise<boolean> {
+  try {
+    const { default: jsPDF } = await import('jspdf');
+    const { default: html2canvas } = await import('html2canvas');
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      windowWidth: element.scrollWidth,
+      windowHeight: element.scrollHeight,
+      backgroundColor: '#ffffff',
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgHeight = (canvas.height * pageWidth) / canvas.width;
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position -= pageHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    pdf.save(`${fileName.replace(/\s+/g, '_')}_AI_Report.pdf`);
+    return true;
+  } catch (error) {
+    console.error('Report PDF generation failed:', error);
+    return false;
+  }
+}
+
+function normalizeReplyText(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith('{')) return trimmed;
+  try {
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    if (typeof parsed.reply === 'string') return parsed.reply;
+  } catch {
+    const m =
+      trimmed.match(/["']reply["']\s*:\s*"([\s\S]*?)"\s*(?:,|})/i) ??
+      trimmed.match(/["']reply["']\s*:\s*'([\s\S]*?)'\s*(?:,|})/i);
+    if (m?.[1]) return m[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+  }
+  return trimmed;
+}
+
+function buildChartData(rows: Row[], config: RenderedChart): { labels: string[]; values: number[] } | null {
+  if (!config.xKey || !config.yKey) return null;
+
+  if (config.type === 'pie') {
+    const totals = new Map<string, number>();
+    for (const row of rows) {
+      const label = String(row[config.xKey] ?? '').trim();
+      const value = Number(String(row[config.yKey] ?? '').replace(/,/g, ''));
+      if (!label || !Number.isFinite(value)) continue;
+      totals.set(label, (totals.get(label) ?? 0) + value);
+    }
+    const labels = Array.from(totals.keys()).slice(0, 12);
+    const values = labels.map((label) => totals.get(label) ?? 0);
+    return labels.length && values.length ? { labels, values } : null;
+  }
+
+  const labels: string[] = [];
+  const values: number[] = [];
+  for (const row of rows) {
+    const label = String(row[config.xKey] ?? '').trim();
+    const value = Number(String(row[config.yKey] ?? '').replace(/,/g, ''));
+    if (!label || !Number.isFinite(value)) continue;
+    labels.push(label);
+    values.push(value);
+    if (labels.length >= 28) break;
+  }
+  return labels.length && values.length ? { labels, values } : null;
 }
 
 export default function SpreadsheetClient() {
@@ -129,6 +222,14 @@ export default function SpreadsheetClient() {
   const [pendingEdits, setPendingEdits] = useState<NonNullable<SpreadsheetAssistantOutput['edits']>>([]);
   const [reportMarkdown, setReportMarkdown] = useState('');
   const [chartSuggestions, setChartSuggestions] = useState<NonNullable<SpreadsheetAssistantOutput['chartSuggestions']>>([]);
+  const [renderedCharts, setRenderedCharts] = useState<RenderedChart[]>([]);
+  const [chartBuilderOpen, setChartBuilderOpen] = useState(false);
+  const [chartType, setChartType] = useState<'bar' | 'line' | 'pie'>('bar');
+  const [chartTitle, setChartTitle] = useState('');
+  const [chartXKey, setChartXKey] = useState('');
+  const [chartYKey, setChartYKey] = useState('');
+  const [isDownloadingReport, setIsDownloadingReport] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
 
   const previewRows = useMemo(() => rows.slice(0, 200), [rows]);
 
@@ -151,6 +252,12 @@ export default function SpreadsheetClient() {
     setPendingEdits([]);
     setReportMarkdown('');
     setChartSuggestions([]);
+    setRenderedCharts([]);
+    setChartBuilderOpen(false);
+    setChartType('bar');
+    setChartTitle('');
+    setChartXKey('');
+    setChartYKey('');
     if (inputRef.current) inputRef.current.value = '';
   };
 
@@ -271,7 +378,13 @@ export default function SpreadsheetClient() {
       toast({ variant: 'destructive', title: t('spreadsheetNoDataTitle'), description: t('spreadsheetNoDataDesc') });
       return;
     }
-    const userRequest = prompt.trim() || t('spreadsheetDefaultPrompt');
+    const defaultPromptByMode: Record<AssistantMode, string> = {
+      conversation: t('spreadsheetDefaultPrompt'),
+      analysis: t('spreadsheetDefaultPrompt'),
+      report: t('spreadsheetReportDefaultPrompt'),
+      chart: t('spreadsheetChartDefaultPrompt'),
+    };
+    const userRequest = prompt.trim() || defaultPromptByMode[mode];
     const nextMessages = [...messages, { role: 'user', content: userRequest } as ChatMessage];
     setAiBusy(true);
     setMessages(nextMessages);
@@ -285,16 +398,19 @@ export default function SpreadsheetClient() {
         sheet: { name: sheetName, columns, rows },
       });
 
-      setMessages((prev) => [...prev, { role: 'assistant', content: response.reply }]);
+      const cleanedReply = normalizeReplyText(response.reply);
+      setMessages((prev) => [...prev, { role: 'assistant', content: cleanedReply }]);
       setPendingEdits(response.edits ?? []);
       setReportMarkdown(response.reportMarkdown ?? '');
       setChartSuggestions(response.chartSuggestions ?? []);
       setPrompt('');
+      return response;
     } catch (error) {
       const msg = error instanceof Error ? error.message : t('spreadsheetAiFailedDesc');
       toast({ variant: 'destructive', title: t('spreadsheetAiFailedTitle'), description: msg });
     } finally {
       setAiBusy(false);
+      return null;
     }
   };
 
@@ -310,6 +426,107 @@ export default function SpreadsheetClient() {
     });
     setPendingEdits([]);
     toast({ title: t('spreadsheetEditsApplied') });
+  };
+
+  const openChartBuilder = async () => {
+    if (!columns.length) {
+      toast({ variant: 'destructive', title: t('spreadsheetNoDataTitle'), description: t('spreadsheetNoDataDesc') });
+      return;
+    }
+    let nextSuggestions = chartSuggestions;
+    if (!nextSuggestions.length) {
+      const response = await runAssistant('chart');
+      nextSuggestions = response?.chartSuggestions ?? [];
+    }
+    const suggested = nextSuggestions[0];
+    setChartType((suggested?.type as 'bar' | 'line' | 'pie' | undefined) ?? 'bar');
+    setChartTitle(suggested?.title ?? t('spreadsheetCustomChartTitle'));
+    setChartXKey(suggested?.xKey ?? columns[0] ?? '');
+    setChartYKey(suggested?.yKey ?? columns[1] ?? columns[0] ?? '');
+    setChartBuilderOpen(true);
+  };
+
+  const useSuggestion = (idx: number) => {
+    const suggestion = chartSuggestions[idx];
+    if (!suggestion) return;
+    setChartType(suggestion.type as 'bar' | 'line' | 'pie');
+    setChartTitle(suggestion.title || t('spreadsheetCustomChartTitle'));
+    setChartXKey(suggestion.xKey || columns[0] || '');
+    setChartYKey(suggestion.yKey || columns[1] || columns[0] || '');
+    setChartBuilderOpen(true);
+  };
+
+  const addCustomChart = () => {
+    if (!chartXKey || !chartYKey) {
+      toast({ variant: 'destructive', title: t('spreadsheetAiFailedTitle'), description: t('spreadsheetChartNeedKeys') });
+      return;
+    }
+    const nextChart: RenderedChart = {
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      type: chartType,
+      title: chartTitle.trim() || `${chartYKey} by ${chartXKey}`,
+      xKey: chartXKey,
+      yKey: chartYKey,
+    };
+    setRenderedCharts((prev) => [...prev, nextChart]);
+    setChartBuilderOpen(false);
+  };
+
+  const ensureChartForReport = (suggestions: NonNullable<SpreadsheetAssistantOutput['chartSuggestions']>) => {
+    if (renderedCharts.length) return renderedCharts;
+    const fromSuggestions = suggestions
+      .filter((s) => s.xKey && s.yKey)
+      .slice(0, 2)
+      .map((s, idx) => ({
+        id: `suggested-${idx}-${Date.now()}`,
+        type: s.type as 'bar' | 'line' | 'pie',
+        title: s.title || `${s.yKey} by ${s.xKey}`,
+        xKey: s.xKey,
+        yKey: s.yKey,
+      }));
+    if (fromSuggestions.length) {
+      setRenderedCharts(fromSuggestions);
+      return fromSuggestions;
+    }
+    if (columns.length >= 2) {
+      const fallback: RenderedChart[] = [
+        {
+          id: `fallback-${Date.now()}`,
+          type: 'bar',
+          title: `${columns[1]} by ${columns[0]}`,
+          xKey: columns[0]!,
+          yKey: columns[1]!,
+        },
+      ];
+      setRenderedCharts(fallback);
+      return fallback;
+    }
+    return [];
+  };
+
+  const generateReportAndDownload = async () => {
+    const response = await runAssistant('report');
+    if (!response) return;
+    const usedCharts = ensureChartForReport(response.chartSuggestions ?? []);
+    if (response.reportMarkdown) setReportMarkdown(response.reportMarkdown);
+    if (response.chartSuggestions?.length) setChartSuggestions(response.chartSuggestions);
+
+    setIsDownloadingReport(true);
+    setTimeout(async () => {
+      const node = reportRef.current;
+      if (!node) {
+        setIsDownloadingReport(false);
+        return;
+      }
+      const ok = await generateAndDownloadPdf(node, `${sheetName || 'spreadsheet'}_report`);
+      if (!ok) {
+        toast({ variant: 'destructive', title: t('spreadsheetReportDownloadFailed') });
+      }
+      if (!usedCharts.length) {
+        toast({ variant: 'destructive', title: t('spreadsheetChartNoData') });
+      }
+      setIsDownloadingReport(false);
+    }, 420);
   };
 
   return (
@@ -430,15 +647,11 @@ export default function SpreadsheetClient() {
                     {aiBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageSquare className="mr-2 h-4 w-4" />}
                     {t('spreadsheetAskAi')}
                   </Button>
-                  <Button variant="outline" onClick={() => runAssistant('analysis')} disabled={aiBusy}>
-                    <Wand2 className="mr-2 h-4 w-4" />
-                    {t('spreadsheetAnalyze')}
-                  </Button>
-                  <Button variant="outline" onClick={() => runAssistant('report')} disabled={aiBusy}>
-                    <FileText className="mr-2 h-4 w-4" />
+                  <Button variant="outline" onClick={generateReportAndDownload} disabled={aiBusy || isDownloadingReport}>
+                    {isDownloadingReport ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
                     {t('spreadsheetReport')}
                   </Button>
-                  <Button variant="outline" onClick={() => runAssistant('chart')} disabled={aiBusy}>
+                  <Button variant="outline" onClick={openChartBuilder} disabled={aiBusy}>
                     <BarChart3 className="mr-2 h-4 w-4" />
                     {t('spreadsheetCharts')}
                   </Button>
@@ -456,12 +669,42 @@ export default function SpreadsheetClient() {
             </Card>
 
             {reportMarkdown ? (
-              <Card>
+              <Card ref={reportRef}>
                 <CardHeader>
                   <CardTitle>{t('spreadsheetGeneratedReport')}</CardTitle>
+                  <CardDescription>{isDownloadingReport ? t('spreadsheetReportDownloading') : t('spreadsheetDownloadReportPdf')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <pre className="whitespace-pre-wrap text-sm">{reportMarkdown}</pre>
+                  {renderedCharts.length ? (
+                    <div className="mt-4 space-y-4">
+                      {renderedCharts.map((cfg) => {
+                        const dataPair = buildChartData(rows, cfg);
+                        if (!dataPair) return null;
+                        const chartData = {
+                          labels: dataPair.labels,
+                          datasets: [
+                            {
+                              label: cfg.yKey,
+                              data: dataPair.values,
+                              backgroundColor: CHART_COLORS,
+                              borderColor: '#2563eb',
+                            },
+                          ],
+                        };
+                        return (
+                          <div key={cfg.id} className="space-y-2">
+                            <p className="text-sm font-medium">{cfg.title}</p>
+                            <div className="h-[220px] bg-background/60 p-2 rounded-md">
+                              {cfg.type === 'bar' ? <Bar data={chartData} options={{ responsive: true, maintainAspectRatio: false }} /> : null}
+                              {cfg.type === 'line' ? <Line data={chartData} options={{ responsive: true, maintainAspectRatio: false }} /> : null}
+                              {cfg.type === 'pie' ? <Pie data={chartData} options={{ responsive: true, maintainAspectRatio: false }} /> : null}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : null}
                 </CardContent>
               </Card>
             ) : null}
@@ -473,23 +716,27 @@ export default function SpreadsheetClient() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {chartSuggestions.map((c, idx) => {
-                    const labels = rows.map((row) => row[c.xKey] ?? '').slice(0, 24);
-                    const values = extractNumericSeries(rows, c.yKey).slice(0, 24);
-                    if (!labels.length || !values.length) {
+                    const dataPair = buildChartData(rows, {
+                      id: `suggested-preview-${idx}`,
+                      type: c.type,
+                      title: c.title,
+                      xKey: c.xKey,
+                      yKey: c.yKey,
+                    });
+                    if (!dataPair) {
                       return (
                         <div key={`${c.title}-${idx}`} className="text-sm text-muted-foreground">
                           {c.title}: {t('spreadsheetChartNoData')}
                         </div>
                       );
                     }
-                    const n = Math.min(labels.length, values.length);
                     const chartData = {
-                      labels: labels.slice(0, n),
+                      labels: dataPair.labels,
                       datasets: [
                         {
                           label: c.yKey,
-                          data: values.slice(0, n),
-                          backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ef4444'],
+                          data: dataPair.values,
+                          backgroundColor: CHART_COLORS,
                           borderColor: '#2563eb',
                         },
                       ],
@@ -498,6 +745,9 @@ export default function SpreadsheetClient() {
                     return (
                       <div key={`${c.title}-${idx}`} className="space-y-2">
                         <p className="text-sm font-medium">{c.title}</p>
+                        <Button size="sm" variant="outline" onClick={() => useSuggestion(idx)}>
+                          {t('spreadsheetUseSuggestion')}
+                        </Button>
                         <div className="h-[220px]">
                           {c.type === 'bar' ? <Bar data={chartData} options={{ responsive: true, maintainAspectRatio: false }} /> : null}
                           {c.type === 'line' ? <Line data={chartData} options={{ responsive: true, maintainAspectRatio: false }} /> : null}
@@ -512,6 +762,72 @@ export default function SpreadsheetClient() {
           </div>
         </div>
       </main>
+
+      <Dialog open={chartBuilderOpen} onOpenChange={setChartBuilderOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('spreadsheetOpenChartBuilder')}</DialogTitle>
+            <DialogDescription>{t('spreadsheetChartBuilderDesc')}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>{t('spreadsheetChartTitle')}</Label>
+              <Input value={chartTitle} onChange={(e) => setChartTitle(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>{t('spreadsheetChartType')}</Label>
+              <Select value={chartType} onValueChange={(value) => setChartType(value as 'bar' | 'line' | 'pie')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bar">Bar</SelectItem>
+                  <SelectItem value="line">Line</SelectItem>
+                  <SelectItem value="pie">Pie</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>{t('spreadsheetXAxis')}</Label>
+              <Select value={chartXKey} onValueChange={setChartXKey}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {columns.map((col) => (
+                    <SelectItem key={`x-${col}`} value={col}>
+                      {col}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>{t('spreadsheetYAxis')}</Label>
+              <Select value={chartYKey} onValueChange={setChartYKey}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {columns.map((col) => (
+                    <SelectItem key={`y-${col}`} value={col}>
+                      {col}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChartBuilderOpen(false)}>
+              {t('cancel')}
+            </Button>
+            <Button onClick={addCustomChart}>{t('spreadsheetCreateChart')}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <footer className="text-xs text-muted-foreground p-3 border-t bg-background">
         <div className="max-w-[1500px] mx-auto flex items-center justify-between">
