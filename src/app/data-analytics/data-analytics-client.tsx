@@ -1,9 +1,8 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import * as XLSX from 'xlsx';
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -27,6 +26,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ChatbotStatus } from '@/components/abdullah-status';
 import { cn } from '@/lib/utils';
 import { FILE_SIZE_LIMITS } from '@/lib/constants';
+
+const DA_ALLOWED_FILE = /^.+\.(csv|xlsx|pdf|jrn)$/i;
+
+function isDataAnalyticsFileName(name: string): boolean {
+  return DA_ALLOWED_FILE.test(name.trim());
+}
 
 const Bar = dynamic(() => import('react-chartjs-2').then(mod => mod.Bar), { ssr: false });
 const Pie = dynamic(() => import('react-chartjs-2').then(mod => mod.Pie), { ssr: false });
@@ -112,9 +117,22 @@ export default function DataAnalyticsClient() {
     e.stopPropagation();
     setIsDragging(true);
     const items = e.dataTransfer?.items;
-    if (items && items.length > 0) {
-      const fileType = items[0].type;
-      setIsDragValid(fileType === 'application/pdf' || fileType === 'text/csv' || fileType === 'application/vnd.ms-excel' || fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    if (items?.length && items[0]?.kind === 'file') {
+      const fileType = (items[0].type || '').toLowerCase();
+      if (!fileType || fileType === 'application/octet-stream') {
+        setIsDragValid(true);
+      } else {
+        setIsDragValid(
+          fileType === 'application/pdf' ||
+            fileType === 'text/csv' ||
+            fileType === 'application/csv' ||
+            fileType === 'application/vnd.ms-excel' ||
+            fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+            fileType === 'text/plain'
+        );
+      }
+    } else {
+      setIsDragValid(true);
     }
   };
 
@@ -181,28 +199,30 @@ export default function DataAnalyticsClient() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    handleClear();
+    setDashboardData(null);
     setIsLoading(true);
     setFileName(file.name);
 
     try {
-      // Validate file type
-      if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.csv') && !file.name.endsWith('.pdf')) {
+      if (!isDataAnalyticsFileName(file.name)) {
         toast({
-            variant: 'destructive',
-            title: t('daUnsupportedFileType'),
-            description: t('daDragDropUnsupported'),
+          variant: 'destructive',
+          title: t('daUnsupportedFileType'),
+          description: t('daDragDropUnsupported'),
         });
         setIsLoading(false);
-        handleClear();
+        setFileName('');
+        setDashboardData(null);
+        if (e.target) e.target.value = '';
+        if (fileInputRef.current) fileInputRef.current.value = '';
         return;
       }
 
-      // Validate file size based on file type
+      const lower = file.name.toLowerCase();
       let maxSize = FILE_SIZE_LIMITS.DEFAULT;
-      if (file.name.endsWith('.pdf')) {
+      if (lower.endsWith('.pdf')) {
         maxSize = FILE_SIZE_LIMITS.PDF;
-      } else if (file.name.endsWith('.csv') || file.name.endsWith('.xlsx')) {
+      } else if (lower.endsWith('.csv') || lower.endsWith('.xlsx') || lower.endsWith('.jrn')) {
         maxSize = FILE_SIZE_LIMITS.CSV;
       }
 
@@ -214,45 +234,51 @@ export default function DataAnalyticsClient() {
           description: t('fileTooLargeDesc', { maxSize: maxSizeMB }) || `File size exceeds ${maxSizeMB}MB limit. Please upload a smaller file.`,
         });
         setIsLoading(false);
-        handleClear();
+        setFileName('');
+        setDashboardData(null);
         if (e.target) e.target.value = '';
+        if (fileInputRef.current) fileInputRef.current.value = '';
         return;
       }
 
       const reader = new FileReader();
       reader.onload = async (event) => {
         try {
-            const dataUri = event.target?.result as string;
-            
-            const result = await generateDashboard({ fileDataUri: dataUri, language });
-            setDashboardData(result);
+          const dataUri = event.target?.result as string;
 
+          const result = await generateDashboard({ fileDataUri: dataUri, language });
+          setDashboardData(result);
         } catch (error: unknown) {
-            console.error("Analysis failed:", error);
-            const errorMessage = error instanceof Error ? error.message : t('daAnalysisFailedDesc');
-            toast({
-                variant: 'destructive',
-                title: t('analysisFailedTitle'),
-                description: errorMessage,
-            });
-            handleClear();
+          console.error('Analysis failed:', error);
+          const errorMessage = error instanceof Error ? error.message : t('daAnalysisFailedDesc');
+          toast({
+            variant: 'destructive',
+            title: t('analysisFailedTitle'),
+            description: errorMessage,
+          });
+          setFileName('');
+          setDashboardData(null);
         } finally {
-            setIsLoading(false);
-            if(e.target) e.target.value = '';
+          setIsLoading(false);
+          if (fileInputRef.current) fileInputRef.current.value = '';
         }
       };
-      reader.readAsDataURL(file);
-
+      const fileForRead = lower.endsWith('.jrn')
+        ? new Blob([file], { type: 'text/plain;charset=utf-8' })
+        : file;
+      reader.readAsDataURL(fileForRead);
     } catch (error: unknown) {
-      console.error("File upload failed:", error);
+      console.error('File upload failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         variant: 'destructive',
         title: t('analysisFailedTitle'),
         description: errorMessage,
       });
-      handleClear();
+      setFileName('');
+      setDashboardData(null);
       setIsLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -284,7 +310,7 @@ export default function DataAnalyticsClient() {
         ref={fileInputRef}
         onChange={handleFileUpload}
         className="hidden"
-        accept=".xlsx,.csv,.pdf"
+        accept=".xlsx,.csv,.pdf,.jrn"
       />
       <header className="grid grid-cols-3 items-center p-4 border-b shrink-0 bg-background relative z-50">
         <div className="justify-self-start flex items-center gap-2">
@@ -367,7 +393,12 @@ export default function DataAnalyticsClient() {
                           </CardContent>
                       </Card>
                       
-                      {dashboardData.charts.map((chart, index) => (
+                      {dashboardData.charts.map((chart, index) => {
+                        const labels = chart.data?.labels ?? [];
+                        const datasets = chart.data?.datasets ?? [];
+                        const n = Math.max(labels.length, 1);
+                        const chartData = { ...chart.data, labels, datasets };
+                        return (
                         <Card key={index} className={dashboardData.charts.length === 1 ? 'lg:col-span-3' : (chart.type === 'bar' ? 'lg:col-span-2' : 'lg:col-span-1') }>
                             <CardHeader className="flex flex-row items-center gap-3 space-y-0">
                                 {chart.type === 'bar' ? <BarChart3 className="w-6 h-6 text-primary"/> : <PieChart className="w-6 h-6 text-primary"/>}
@@ -375,17 +406,20 @@ export default function DataAnalyticsClient() {
                             </CardHeader>
                             <CardContent>
                                 <div className="h-[300px] md:h-[400px]">
-                                    {chart.type === 'bar' ? (
-                                        <Bar data={{ ...chart.data, datasets: chart.data.datasets.map(ds => ({...ds, backgroundColor: getPieChartColors(chart.data.labels.length) })) }} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }} />
+                                    {labels.length === 0 || datasets.length === 0 ? (
+                                      <p className="text-sm text-muted-foreground">{t('daAnalysisFailedDesc')}</p>
+                                    ) : chart.type === 'bar' ? (
+                                        <Bar data={{ ...chartData, datasets: chartData.datasets.map(ds => ({...ds, backgroundColor: getPieChartColors(n) })) }} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }} />
                                     ) : (
                                         <div className="h-full w-full flex items-center justify-center">
-                                          <Pie data={{ ...chart.data, datasets: chart.data.datasets.map(ds => ({...ds, backgroundColor: getPieChartColors(chart.data.labels.length) })) }} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }} />
+                                          <Pie data={{ ...chartData, datasets: chartData.datasets.map(ds => ({...ds, backgroundColor: getPieChartColors(n) })) }} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }} />
                                         </div>
                                     )}
                                 </div>
                             </CardContent>
                         </Card>
-                      ))}
+                        );
+                      })}
                       
                         <Card className="lg:col-span-3">
                           <CardHeader className="flex flex-row items-center gap-3 space-y-0">

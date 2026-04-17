@@ -9,6 +9,7 @@ import { ai, defaultModel, defaultRetryMiddleware } from '@/ai/genkit';
 import { extractTextFromFile, cleanText } from '@/lib/pdf-extractor';
 import { z } from 'genkit';
 import { CONTEXT_LIMITS, TIMEOUTS } from '@/lib/constants';
+import { isTransientGeminiError, withTransientGeminiRetries } from '@/lib/gemini-transient-retry';
 import { withLLMTimeout, withFileOperationTimeout } from '@/lib/timeout-utils';
 
 const PRIMARY_DOC_CHAR_BUDGET = CONTEXT_LIMITS.FINANCIAL_STATEMENT;
@@ -43,7 +44,7 @@ const AnalyzeFinancialStatementInputSchema = z.object({
   pdfDataUri: z
     .string()
     .describe(
-      'Financial data as a data URI (Base64). Supported: PDF, Excel (.xlsx, .xls, .xlsm, .ods), CSV/TSV, plain text, JSON, XML, HTML.'
+      'Financial data as a data URI (Base64). Supported: PDF, Excel (.xlsx, .xls, .xlsm, .ods), CSV/TSV, journal (.jrn), plain text, JSON, XML, HTML.'
     ),
   language: z
     .enum(['en', 'ar'])
@@ -178,7 +179,13 @@ function buildCompactDocumentText(raw: string, type: string, maxChars: number): 
   if (text.length <= maxChars) return text;
 
   const isTabular =
-    type === 'csv' || type === 'xlsx' || type === 'xls' || type === 'xlsm' || type === 'ods' || type === 'spreadsheet';
+    type === 'csv' ||
+    type === 'xlsx' ||
+    type === 'xls' ||
+    type === 'xlsm' ||
+    type === 'ods' ||
+    type === 'spreadsheet' ||
+    type === 'jrn';
   if (!isTabular) return text.slice(0, maxChars);
 
   const lines = text.split('\n');
@@ -225,47 +232,6 @@ function isRequestTooLargeError(error: unknown): boolean {
 function isStructuredOutputSchemaError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error ?? '');
   return message.includes('Schema validation failed') || message.includes('must have required property');
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** Google occasionally returns 503 / UNAVAILABLE during demand spikes; safe to retry with backoff. */
-function isTransientGeminiError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error ?? '');
-  return (
-    message.includes('UNAVAILABLE') ||
-    message.includes('503') ||
-    message.includes('429') ||
-    message.includes('high demand') ||
-    message.includes('RESOURCE_EXHAUSTED') ||
-    message.includes('Too Many Requests')
-  );
-}
-
-async function withTransientGeminiRetries<T>(
-  context: string,
-  operation: () => Promise<T>,
-  maxAttempts = 4
-): Promise<T> {
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      return await operation();
-    } catch (e) {
-      if (!isTransientGeminiError(e) || attempt >= maxAttempts) {
-        throw e;
-      }
-      const delayMs = Math.min(10_000, 900 * 2 ** (attempt - 1));
-      console.warn(
-        `${context}: transient Gemini error (attempt ${attempt}/${maxAttempts}); retrying in ${delayMs}ms — ${
-          e instanceof Error ? e.message : String(e)
-        }`
-      );
-      await sleep(delayMs);
-    }
-  }
-  throw new Error(`${context}: exhausted retries without returning`);
 }
 
 async function runAnalyzeFinancialStatement(

@@ -34,6 +34,7 @@ const CHAT_UPLOAD_EXTENSIONS = new Set([
     '.sta',
     '.cob',
     '.swift',
+    '.jrn',
 ]);
 
 const MIME_ALLOWLIST = new Set([
@@ -88,7 +89,7 @@ export function getMaxSizeForChatUpload(file: File): number {
     const n = file.name.toLowerCase();
     if (n.endsWith('.pdf')) return FILE_SIZE_LIMITS.PDF;
     if (/\.(xlsx|xls|xlsm|ods)$/.test(n)) return FILE_SIZE_LIMITS.XLSX;
-    if (/\.(csv|tsv|txt|json|xml|yaml|yml|html|htm|rtf|prn|dat|psv|tab|log|iif|qif|gl|mt940|sta|cob|swift)$/.test(n)) {
+    if (/\.(csv|tsv|txt|json|xml|yaml|yml|html|htm|rtf|prn|dat|psv|tab|log|iif|qif|gl|mt940|sta|cob|swift|jrn)$/.test(n)) {
         return FILE_SIZE_LIMITS.CSV;
     }
     return FILE_SIZE_LIMITS.DEFAULT;
@@ -140,6 +141,7 @@ export const CHAT_FILE_INPUT_ACCEPT = [
     '.sta',
     '.cob',
     '.swift',
+    '.jrn',
     'application/pdf',
     'text/csv',
     'application/vnd.ms-excel',

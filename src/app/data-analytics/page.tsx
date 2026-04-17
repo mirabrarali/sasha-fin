@@ -5,8 +5,8 @@ export const maxDuration = 120;
 
 export const metadata: Metadata = {
     title: 'Data Analytics Dashboard',
-    description: 'Upload your data (CSV, Excel, PDF) and let Abdullah instantly generate an interactive dashboard with AI-powered insights and visualizations.',
-    keywords: ['data analytics', 'business intelligence', 'ai dashboard', 'csv analysis', 'excel analysis', 'pdf data extraction'],
+    description: 'Upload your data (CSV, Excel, PDF, JRN) and let Abdullah instantly generate an interactive dashboard with AI-powered insights and visualizations.',
+    keywords: ['data analytics', 'business intelligence', 'ai dashboard', 'csv analysis', 'excel analysis', 'pdf data extraction', 'jrn journal'],
 };
 
 export default function DataAnalyticsPage() {

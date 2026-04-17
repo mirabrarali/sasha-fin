@@ -149,13 +149,14 @@ export async function buildDocumentContextForChat(dataUri: string): Promise<stri
         fallback.type === 'spreadsheet' ||
         fallback.type === 'ods';
     const preserveStructure =
-        isTabular || fallback.type === 'json' || fallback.type === 'text';
+        isTabular || fallback.type === 'json' || fallback.type === 'text' || fallback.type === 'jrn';
 
     const body = preserveStructure ? raw.replace(/\r\n?/g, '\n').trim() : cleanText(raw);
     const cap = CONTEXT_LIMITS.CHAT_DOCUMENT_MAX;
     const slice = body.slice(0, cap);
-    return [
-        '## Extracted file text (fallback — prefer exact counts only if stated below)',
-        slice,
-    ].join('\n\n');
+    const header =
+        fallback.type === 'jrn'
+            ? '## Extracted journal (.jrn) text (line-oriented; prefer explicit labels in the file)'
+            : '## Extracted file text (fallback — prefer exact counts only if stated below)';
+    return [header, slice].join('\n\n');
 }

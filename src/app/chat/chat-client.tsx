@@ -332,7 +332,9 @@ export default function ChatPageClient() {
 
     setIsLoading(true);
     const reader = new FileReader();
-    reader.readAsDataURL(file);
+    const fileForDataUrl =
+      file.name.toLowerCase().endsWith('.jrn') ? new Blob([file], { type: 'text/plain;charset=utf-8' }) : file;
+    reader.readAsDataURL(fileForDataUrl);
     reader.onload = async (e) => {
       try {
         const dataUri = e.target?.result as string;

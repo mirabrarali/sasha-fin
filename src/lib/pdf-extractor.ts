@@ -1,5 +1,5 @@
 /**
- * File text extraction for PDF, spreadsheets, and plain-text formats (CSV, JSON, etc.).
+ * File text extraction for PDF, spreadsheets, journal exports (.jrn), and plain-text formats (CSV, JSON, etc.).
  * PDF uses a dynamic `unpdf` import so Vercel serverless does not load canvas-based PDF stacks.
  */
 
@@ -45,6 +45,14 @@ function isZipOfficeOpenXml(buf: Buffer): boolean {
 
 function isOleCompoundFile(buf: Buffer): boolean {
     return buf.length >= 4 && buf[0] === 0xd0 && buf[1] === 0xcf && buf[2] === 0x11 && buf[3] === 0xe0;
+}
+
+/** QuickBooks-style journal / common ledger export markers (ASCII). */
+function textLooksLikeJournalExport(s: string): boolean {
+    const u = s.slice(0, 12_000).toUpperCase();
+    if (u.includes('!TRNS') || u.includes('!SPL') || u.includes('!ENDTRNS')) return true;
+    if (u.includes('DATE') && u.includes('ACCNT') && u.includes('AMOUNT')) return true;
+    return false;
 }
 
 function bufferLooksLikeTextCsv(buf: Buffer): boolean {
@@ -211,12 +219,16 @@ export async function extractTextFromFile(base64DataUri: string): Promise<FileEx
             mimeBase === 'text/html'
         ) {
             const body = decodeTextBuffer(buffer);
+            if (mimeBase === 'application/json') {
+                return { text: body, type: 'json' };
+            }
+            if (textLooksLikeJournalExport(body)) {
+                return { text: body, type: 'jrn' };
+            }
             const type =
-                mimeBase === 'application/json'
-                    ? 'json'
-                    : mimeBase === 'text/csv' || mimeBase === 'application/csv' || mimeBase === 'text/tab-separated-values'
-                      ? 'csv'
-                      : 'text';
+                mimeBase === 'text/csv' || mimeBase === 'application/csv' || mimeBase === 'text/tab-separated-values'
+                    ? 'csv'
+                    : 'text';
             return { text: body, type };
         }
 
@@ -232,7 +244,11 @@ export async function extractTextFromFile(base64DataUri: string): Promise<FileEx
                 throw new Error('File looks like Excel but could not be read.');
             }
             if (bufferLooksLikeTextCsv(buffer)) {
-                return { text: decodeTextBuffer(buffer), type: 'csv' };
+                const body = decodeTextBuffer(buffer);
+                if (textLooksLikeJournalExport(body)) {
+                    return { text: body, type: 'jrn' };
+                }
+                return { text: body, type: 'csv' };
             }
             const sheetText = tryExtractSpreadsheet(buffer);
             if (sheetText) {
@@ -248,7 +264,13 @@ export async function extractTextFromFile(base64DataUri: string): Promise<FileEx
 
         const asUtf8 = decodeTextBuffer(buffer);
         if (bufferLooksLikeTextCsv(buffer) && asUtf8.trim().length > 0) {
+            if (textLooksLikeJournalExport(asUtf8)) {
+                return { text: asUtf8, type: 'jrn' };
+            }
             return { text: asUtf8, type: 'csv' };
+        }
+        if (textLooksLikeJournalExport(asUtf8)) {
+            return { text: asUtf8, type: 'jrn' };
         }
         return { text: asUtf8, type: 'text' };
     } catch (error) {
