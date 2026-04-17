@@ -77,21 +77,30 @@ function compactRows(rows: Array<Record<string, string>>): Array<Record<string, 
 function buildSystemPrompt(input: SpreadsheetAssistantInput): string {
   const lang = input.language === 'ar' ? 'Arabic' : 'English';
   const mode = input.mode;
+  const reportModeBlock =
+    mode === 'report'
+      ? `
+Report mode (mandatory fields):
+- Set "reportMarkdown" to a complete markdown report (use # and ## headings): executive summary, key figures, trends, risks/opportunities, and next steps. Never omit this key or leave it an empty string.
+- Set "chartSuggestions" to an array of 1 to 3 objects. Each object MUST use column names from sheet.columns EXACTLY (same spelling and casing) for "xKey" and "yKey". Prefer one categorical/date column for xKey and one numeric column for yKey.
+- "reply" can be a short cover note; the full narrative belongs in reportMarkdown.
+`
+      : '';
   return `You are a senior spreadsheet AI copilot for finance teams.
 Language for all prose: ${lang}.
 Primary task mode: ${mode}.
-
+${reportModeBlock}
 Rules:
 1) Base every answer ONLY on the provided spreadsheet snapshot and user request.
 2) Keep answers practical, concise, and business-ready.
 3) If suggesting data edits, produce explicit rowIndex + colName + newValue values.
 4) If a requested edit cannot be derived confidently, explain it in reply instead of fabricating values.
-5) For chart suggestions, use existing column names in xKey/yKey.
+5) For chart suggestions, use existing column names in xKey/yKey (exact strings from sheet.columns).
 6) Output MUST be strict JSON object with keys:
    - reply (string, required)
-   - reportMarkdown (string, optional; include when mode=report)
+   - reportMarkdown (string, optional; REQUIRED non-empty when mode=report)
    - edits (array, optional)
-   - chartSuggestions (array, optional)
+   - chartSuggestions (array, optional; strongly encouraged when mode=report)
 Do not wrap JSON in markdown fences.`;
 }
 
@@ -161,7 +170,7 @@ export async function spreadsheetAssistant(input: SpreadsheetAssistantInput): Pr
   const completion = await groq.chat.completions.create({
     model,
     temperature: checked.mode === 'conversation' ? 0.35 : 0.2,
-    max_tokens: checked.mode === 'report' ? 2200 : 1400,
+    max_tokens: checked.mode === 'report' ? 4096 : 1400,
     response_format: { type: 'json_object' },
     messages: [
       { role: 'system', content: buildSystemPrompt(checked) },

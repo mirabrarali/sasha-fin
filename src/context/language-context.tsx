@@ -213,6 +213,8 @@ const translations: { [key in Language]: { [key: string]: string } } = {
       'No narrative text was returned for this run. Charts below still reflect your sheet when numeric columns are detected.',
     spreadsheetChartSuggestions: 'Chart Suggestions',
     spreadsheetChartNoData: 'No numeric data available for this suggestion.',
+    spreadsheetChartRenderSkipped:
+      'Could not plot "{{title}}" — columns may not match the sheet or values are not numeric. Use Chart Builder to pick columns.',
     spreadsheetPreviewNote: 'Showing first {{shown}} rows out of {{total}} for performance.',
     spreadsheetFooterNote: 'The spreadsheet workspace uses its own assistant configuration, separate from chat and dashboard flows.',
     chatDragDropSupported: "Supported: PDF, CSV, XLSX, XLS, JRN",
@@ -419,6 +421,8 @@ const translations: { [key in Language]: { [key: string]: string } } = {
       'لم يُرجع النص السردي في هذه المرة. الرسوم أدناه ما زالت تعكس الجدول عند وجود أعمدة رقمية.',
     spreadsheetChartSuggestions: 'اقتراحات الرسوم',
     spreadsheetChartNoData: 'لا توجد بيانات رقمية كافية لهذا الاقتراح.',
+    spreadsheetChartRenderSkipped:
+      'تعذّر رسم «{{title}}» — قد لا تتطابق الأعمدة مع الجدول أو القيم غير رقمية. استخدم منشئ الرسوم لاختيار الأعمدة.',
     spreadsheetPreviewNote: 'يتم عرض أول {{shown}} صف من أصل {{total}} لتحسين الأداء.',
     spreadsheetFooterNote: 'مساحة الجداول تستخدم إعداد مساعد منفصل عن الدردشة ولوحة التحليلات.',
     chatDragDropSupported: "المدعومة: PDF، CSV، XLSX، XLS، JRN",

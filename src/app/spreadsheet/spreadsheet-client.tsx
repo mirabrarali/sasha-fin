@@ -187,15 +187,46 @@ function normalizeReplyText(text: string): string {
   return trimmed;
 }
 
-function buildChartData(rows: Row[], config: RenderedChart): { labels: string[]; values: number[] } | null {
-  if (!config.xKey || !config.yKey) return null;
+function resolveColumnKey(columnList: string[], key: string): string | undefined {
+  const t = key.trim();
+  if (!t) return undefined;
+  const lower = t.toLowerCase();
+  return columnList.find((c) => c.trim().toLowerCase() === lower);
+}
+
+/** Parse currency / percent / grouped digits from spreadsheet cells. */
+function parseNumericCell(raw: unknown): number | null {
+  const s = String(raw ?? '')
+    .replace(/\u00a0/g, ' ')
+    .trim();
+  if (!s) return null;
+  let t = s.replace(/[$€£\s]/g, '');
+  if (/%$/.test(t)) t = t.slice(0, -1);
+  t = t.replace(/,/g, '');
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
+}
+
+function resolveChartKeys(columnList: string[], xKey: string, yKey: string): { x: string; y: string } {
+  const x = resolveColumnKey(columnList, xKey) ?? xKey;
+  const y = resolveColumnKey(columnList, yKey) ?? yKey;
+  return { x, y };
+}
+
+function buildChartData(
+  rows: Row[],
+  config: RenderedChart,
+  columnList: string[],
+): { labels: string[]; values: number[] } | null {
+  if (!config.xKey || !config.yKey || !columnList.length) return null;
+  const { x: xKey, y: yKey } = resolveChartKeys(columnList, config.xKey, config.yKey);
 
   if (config.type === 'pie') {
     const totals = new Map<string, number>();
     for (const row of rows) {
-      const label = String(row[config.xKey] ?? '').trim();
-      const value = Number(String(row[config.yKey] ?? '').replace(/,/g, ''));
-      if (!label || !Number.isFinite(value)) continue;
+      const label = String(row[xKey] ?? '').trim() || '—';
+      const value = parseNumericCell(row[yKey]);
+      if (value == null) continue;
       totals.set(label, (totals.get(label) ?? 0) + value);
     }
     const labels = Array.from(totals.keys()).slice(0, 12);
@@ -205,15 +236,49 @@ function buildChartData(rows: Row[], config: RenderedChart): { labels: string[];
 
   const labels: string[] = [];
   const values: number[] = [];
-  for (const row of rows) {
-    const label = String(row[config.xKey] ?? '').trim();
-    const value = Number(String(row[config.yKey] ?? '').replace(/,/g, ''));
-    if (!label || !Number.isFinite(value)) continue;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]!;
+    const rawLabel = row[xKey];
+    const label = String(rawLabel ?? '').trim() || `Row ${i + 1}`;
+    const value = parseNumericCell(row[yKey]);
+    if (value == null) continue;
     labels.push(label);
     values.push(value);
     if (labels.length >= 28) break;
   }
   return labels.length && values.length ? { labels, values } : null;
+}
+
+/** When the model picks wrong keys, infer a bar chart from numeric density. */
+function inferBestBarChart(columnList: string[], rows: Row[]): RenderedChart | null {
+  if (columnList.length < 2 || !rows.length) return null;
+  let bestY = columnList[0]!;
+  let bestScore = -1;
+  for (const col of columnList) {
+    let ok = 0;
+    let n = 0;
+    for (const row of rows.slice(0, Math.min(rows.length, 120))) {
+      const v = row[col];
+      if (v === undefined || String(v).trim() === '') continue;
+      n++;
+      if (parseNumericCell(v) != null) ok++;
+    }
+    const score = n ? ok / Math.max(n, 1) : 0;
+    if (score > bestScore) {
+      bestScore = score;
+      bestY = col;
+    }
+  }
+  if (bestScore < 0.12) return null;
+  const xKey = columnList.find((c) => c !== bestY) ?? columnList[0]!;
+  if (xKey === bestY) return null;
+  return {
+    id: `inferred-${Date.now()}`,
+    type: 'bar',
+    title: `${bestY} by ${xKey}`,
+    xKey,
+    yKey: bestY,
+  };
 }
 
 export default function SpreadsheetClient() {
@@ -410,7 +475,10 @@ export default function SpreadsheetClient() {
       const cleanedReply = normalizeReplyText(response.reply);
       setMessages((prev) => [...prev, { role: 'assistant', content: cleanedReply }]);
       setPendingEdits(response.edits ?? []);
-      setReportMarkdown(response.reportMarkdown ?? '');
+      const mdFromModel = (response.reportMarkdown ?? '').trim();
+      const reportBody =
+        mode === 'report' && !mdFromModel && cleanedReply.trim() ? cleanedReply.trim() : mdFromModel;
+      setReportMarkdown(reportBody);
       setChartSuggestions(response.chartSuggestions ?? []);
       setPrompt('');
       return response;
@@ -481,11 +549,15 @@ export default function SpreadsheetClient() {
     setChartBuilderOpen(false);
   };
 
-  const ensureChartForReport = (suggestions: NonNullable<SpreadsheetAssistantOutput['chartSuggestions']>) => {
-    if (renderedCharts.length) return renderedCharts;
+  const ensureChartForReport = (
+    suggestions: NonNullable<SpreadsheetAssistantOutput['chartSuggestions']>,
+    force: boolean,
+  ): RenderedChart[] => {
+    if (!force && renderedCharts.length) return renderedCharts;
+
     const fromSuggestions = suggestions
       .filter((s) => s.xKey && s.yKey)
-      .slice(0, 2)
+      .slice(0, 4)
       .map((s, idx) => ({
         id: `suggested-${idx}-${Date.now()}`,
         type: s.type as 'bar' | 'line' | 'pie',
@@ -493,55 +565,76 @@ export default function SpreadsheetClient() {
         xKey: s.xKey,
         yKey: s.yKey,
       }));
-    if (fromSuggestions.length) {
-      setRenderedCharts(fromSuggestions);
-      return fromSuggestions;
+
+    const usable: RenderedChart[] = [];
+    for (const cfg of fromSuggestions) {
+      if (buildChartData(rows, cfg, columns)) usable.push(cfg);
+      if (usable.length >= 2) break;
     }
+    if (usable.length) {
+      setRenderedCharts(usable.slice(0, 2));
+      return usable.slice(0, 2);
+    }
+
     if (columns.length >= 2) {
-      const fallback: RenderedChart[] = [
-        {
-          id: `fallback-${Date.now()}`,
-          type: 'bar',
-          title: `${columns[1]} by ${columns[0]}`,
-          xKey: columns[0]!,
-          yKey: columns[1]!,
-        },
-      ];
-      setRenderedCharts(fallback);
-      return fallback;
+      const fallback: RenderedChart = {
+        id: `fallback-${Date.now()}`,
+        type: 'bar',
+        title: `${columns[1]} by ${columns[0]}`,
+        xKey: columns[0]!,
+        yKey: columns[1]!,
+      };
+      if (buildChartData(rows, fallback, columns)) {
+        setRenderedCharts([fallback]);
+        return [fallback];
+      }
     }
+
+    const inferred = inferBestBarChart(columns, rows);
+    if (inferred && buildChartData(rows, inferred, columns)) {
+      setRenderedCharts([inferred]);
+      return [inferred];
+    }
+
+    setRenderedCharts([]);
     return [];
   };
 
   const generateReportAndDownload = async () => {
     const response = await runAssistant('report');
     if (!response) return;
-    const usedCharts = ensureChartForReport(response.chartSuggestions ?? []);
     if (response.chartSuggestions?.length) setChartSuggestions(response.chartSuggestions);
+    const usedCharts = ensureChartForReport(response.chartSuggestions ?? [], true);
 
     setIsDownloadingReport(true);
     const capturePdf = async () => {
-      const node = reportRef.current;
-      if (!node) {
-        toast({ variant: 'destructive', title: t('spreadsheetReportDownloadFailed'), description: t('spreadsheetReportCaptureMissing') });
+      try {
+        const node = reportRef.current;
+        if (!node) {
+          toast({
+            variant: 'destructive',
+            title: t('spreadsheetReportDownloadFailed'),
+            description: t('spreadsheetReportCaptureMissing'),
+          });
+          return;
+        }
+        const ok = await generateAndDownloadPdf(node, `${sheetName || 'spreadsheet'}_report`);
+        if (!ok) {
+          toast({ variant: 'destructive', title: t('spreadsheetReportDownloadFailed') });
+        }
+        if (!usedCharts.length) {
+          toast({ variant: 'destructive', title: t('spreadsheetChartNoData') });
+        }
+      } finally {
         setIsDownloadingReport(false);
-        return;
       }
-      const ok = await generateAndDownloadPdf(node, `${sheetName || 'spreadsheet'}_report`);
-      if (!ok) {
-        toast({ variant: 'destructive', title: t('spreadsheetReportDownloadFailed') });
-      }
-      if (!usedCharts.length) {
-        toast({ variant: 'destructive', title: t('spreadsheetChartNoData') });
-      }
-      setIsDownloadingReport(false);
     };
     // Let React paint the report card and Chart.js finish layout before html2canvas.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         window.setTimeout(() => {
           void capturePdf();
-        }, 750);
+        }, 900);
       });
     });
   };
@@ -700,8 +793,14 @@ export default function SpreadsheetClient() {
                   {renderedCharts.length ? (
                     <div className="space-y-4">
                       {renderedCharts.map((cfg) => {
-                        const dataPair = buildChartData(rows, cfg);
-                        if (!dataPair) return null;
+                        const dataPair = buildChartData(rows, cfg, columns);
+                        if (!dataPair) {
+                          return (
+                            <div key={cfg.id} className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                              {t('spreadsheetChartRenderSkipped', { title: cfg.title })}
+                            </div>
+                          );
+                        }
                         const chartData = {
                           labels: dataPair.labels,
                           datasets: [
@@ -716,10 +815,16 @@ export default function SpreadsheetClient() {
                         return (
                           <div key={cfg.id} className="space-y-2">
                             <p className="text-sm font-medium">{cfg.title}</p>
-                            <div className="h-[240px] w-full min-w-0 bg-background/60 p-2 rounded-md border">
-                              {cfg.type === 'bar' ? <Bar data={chartData} options={CHART_JS_EXPORT_OPTIONS} /> : null}
-                              {cfg.type === 'line' ? <Line data={chartData} options={CHART_JS_EXPORT_OPTIONS} /> : null}
-                              {cfg.type === 'pie' ? <Pie data={chartData} options={CHART_JS_EXPORT_OPTIONS} /> : null}
+                            <div className="relative h-[260px] w-full min-w-[200px] bg-background/60 p-2 rounded-md border">
+                              {cfg.type === 'bar' ? (
+                                <Bar key={`bar-${cfg.id}`} data={chartData} options={CHART_JS_EXPORT_OPTIONS} redraw />
+                              ) : null}
+                              {cfg.type === 'line' ? (
+                                <Line key={`line-${cfg.id}`} data={chartData} options={CHART_JS_EXPORT_OPTIONS} redraw />
+                              ) : null}
+                              {cfg.type === 'pie' ? (
+                                <Pie key={`pie-${cfg.id}`} data={chartData} options={CHART_JS_EXPORT_OPTIONS} redraw />
+                              ) : null}
                             </div>
                           </div>
                         );
@@ -737,13 +842,17 @@ export default function SpreadsheetClient() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {chartSuggestions.map((c, idx) => {
-                    const dataPair = buildChartData(rows, {
-                      id: `suggested-preview-${idx}`,
-                      type: c.type,
-                      title: c.title,
-                      xKey: c.xKey,
-                      yKey: c.yKey,
-                    });
+                    const dataPair = buildChartData(
+                      rows,
+                      {
+                        id: `suggested-preview-${idx}`,
+                        type: c.type,
+                        title: c.title,
+                        xKey: c.xKey,
+                        yKey: c.yKey,
+                      },
+                      columns,
+                    );
                     if (!dataPair) {
                       return (
                         <div key={`${c.title}-${idx}`} className="text-sm text-muted-foreground">
