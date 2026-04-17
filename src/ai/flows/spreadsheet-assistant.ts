@@ -57,10 +57,68 @@ function getGroqClient(): Groq {
   return new Groq({ apiKey });
 }
 
+function conversationModelId(): string {
+  return process.env.GROQ_SPREADSHEET_CONVO_MODEL || 'llama-3.1-8b-instant';
+}
+
+/** Primary model for analysis / report / chart (defaults to 8B to stay within typical free-tier limits). */
+function analyticsModelId(): string {
+  return process.env.GROQ_SPREADSHEET_ANALYTICS_MODEL || 'llama-3.1-8b-instant';
+}
+
+/** Used when the primary analytics model returns HTTP 429 (same key as convo by default). */
+function analyticsFallbackModelId(): string {
+  return (
+    process.env.GROQ_SPREADSHEET_ANALYTICS_FALLBACK_MODEL ||
+    process.env.GROQ_SPREADSHEET_CONVO_MODEL ||
+    'llama-3.1-8b-instant'
+  );
+}
+
 function pickModel(mode: SpreadsheetAssistantInput['mode']): string {
-  const conversationModel = process.env.GROQ_SPREADSHEET_CONVO_MODEL || 'llama-3.1-8b-instant';
-  const analyticsModel = process.env.GROQ_SPREADSHEET_ANALYTICS_MODEL || 'llama-3.3-70b-versatile';
-  return mode === 'conversation' ? conversationModel : analyticsModel;
+  return mode === 'conversation' ? conversationModelId() : analyticsModelId();
+}
+
+function isGroqRateLimitError(error: unknown): boolean {
+  if (error == null || typeof error !== 'object') return false;
+  const e = error as { status?: number; message?: string };
+  if (e.status === 429) return true;
+  const msg = String(e.message ?? '');
+  return /429|rate_limit|Rate limit|TPD|tokens per day/i.test(msg);
+}
+
+function rateLimitUserMessage(language: SpreadsheetAssistantInput['language'], raw: unknown): string {
+  const msg = raw instanceof Error ? raw.message : String(raw ?? '');
+  const m = msg.match(/try again in ([^.]+)/i);
+  const hint = m?.[1]?.trim();
+  if (language === 'ar') {
+    return hint
+      ? `تم تجاوز حد استخدام واجهة الجداول مؤقتًا. حاول مرة أخرى بعد حوالي: ${hint}. يمكنك ترقية الخطة أو تقليل طلبات التقرير حتى يُعاد تعيين الحد.`
+      : 'تم تجاوز حد استخدام واجهة الجداول مؤقتًا. انتظر قليلًا أو رقِّ الخطة، أو عيّن نموذجًا أصغر عبر متغيرات البيئة.';
+  }
+  return hint
+    ? `The spreadsheet assistant hit a temporary usage limit. Try again in about ${hint}, use a smaller model via environment variables, or upgrade your API plan.`
+    : 'The spreadsheet assistant hit a temporary usage limit. Wait and retry, point GROQ_SPREADSHEET_ANALYTICS_MODEL at a smaller model, or upgrade your API plan.';
+}
+
+async function runGroqJsonCompletion(
+  groq: Groq,
+  model: string,
+  checked: SpreadsheetAssistantInput,
+  maxTokens: number,
+): Promise<{ content: string; model: string }> {
+  const completion = await groq.chat.completions.create({
+    model,
+    temperature: checked.mode === 'conversation' ? 0.35 : 0.2,
+    max_tokens: maxTokens,
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: buildSystemPrompt(checked) },
+      { role: 'user', content: buildUserPayload(checked) },
+    ],
+  });
+  const content = completion.choices?.[0]?.message?.content ?? '';
+  return { content, model };
 }
 
 function compactRows(rows: Array<Record<string, string>>): Array<Record<string, string>> {
@@ -165,20 +223,35 @@ function parseAssistantOutput(raw: string, modelUsed: string): SpreadsheetAssist
 export async function spreadsheetAssistant(input: SpreadsheetAssistantInput): Promise<SpreadsheetAssistantOutput> {
   const checked = SpreadsheetInputSchema.parse(input);
   const groq = getGroqClient();
-  const model = pickModel(checked.mode);
+  const primary = pickModel(checked.mode);
+  const reportTokens = 2800;
+  const defaultTokens = checked.mode === 'report' ? reportTokens : 1400;
 
-  const completion = await groq.chat.completions.create({
-    model,
-    temperature: checked.mode === 'conversation' ? 0.35 : 0.2,
-    max_tokens: checked.mode === 'report' ? 4096 : 1400,
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: buildSystemPrompt(checked) },
-      { role: 'user', content: buildUserPayload(checked) },
-    ],
-  });
+  try {
+    const { content, model } = await runGroqJsonCompletion(groq, primary, checked, defaultTokens);
+    return parseAssistantOutput(content, model);
+  } catch (error) {
+    const canFallback =
+      checked.mode !== 'conversation' && isGroqRateLimitError(error) && analyticsFallbackModelId() !== primary;
 
-  const content = completion.choices?.[0]?.message?.content ?? '';
-  return parseAssistantOutput(content, model);
+    if (canFallback) {
+      const fb = analyticsFallbackModelId();
+      const fbTokens = checked.mode === 'report' ? Math.min(2048, reportTokens) : 1000;
+      try {
+        const { content, model } = await runGroqJsonCompletion(groq, fb, checked, fbTokens);
+        return parseAssistantOutput(content, model);
+      } catch (second) {
+        if (isGroqRateLimitError(second)) {
+          throw new Error(rateLimitUserMessage(checked.language, second));
+        }
+        throw second;
+      }
+    }
+
+    if (isGroqRateLimitError(error)) {
+      throw new Error(rateLimitUserMessage(checked.language, error));
+    }
+    throw error;
+  }
 }
 
