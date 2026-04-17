@@ -54,8 +54,8 @@ export function parseRetryAfterMsFromGoogleError(error: unknown): number | null 
 function resolveMaxSleepMsCap(override?: number): number {
   if (typeof override === 'number' && override > 0) return override;
   const fromEnv = Number(process.env.GEMINI_RETRY_MAX_SLEEP_MS);
-  if (!Number.isNaN(fromEnv) && fromEnv >= 5000) return fromEnv;
-  return 120_000;
+  if (!Number.isNaN(fromEnv) && fromEnv >= 1000) return fromEnv;
+  return 4_000;
 }
 
 function computeRetryDelayMs(error: unknown, attemptAfterFailure: number, maxSleepMs: number): number {
@@ -84,11 +84,11 @@ export type GeminiRetryOptions = {
 export async function withTransientGeminiRetries<T>(
   context: string,
   operation: () => Promise<T>,
-  maxAttemptsOrOpts: number | GeminiRetryOptions = 6
+  maxAttemptsOrOpts: number | GeminiRetryOptions = 2
 ): Promise<T> {
   const opts: GeminiRetryOptions =
     typeof maxAttemptsOrOpts === 'number' ? { maxAttempts: maxAttemptsOrOpts } : maxAttemptsOrOpts;
-  const maxAttempts = Math.max(2, opts.maxAttempts ?? 6);
+  const maxAttempts = Math.max(1, opts.maxAttempts ?? 2);
   const maxSleepMs = resolveMaxSleepMsCap(opts.maxSleepMs);
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {

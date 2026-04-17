@@ -224,7 +224,7 @@ Conversation:
 ${conversationText}`;
 
     let lastError: Error | null = null;
-    const maxRetries = RETRY_CONFIG.MAX_ATTEMPTS;
+    const maxRetries = Math.min(RETRY_CONFIG.MAX_ATTEMPTS, 1);
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {

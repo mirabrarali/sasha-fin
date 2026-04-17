@@ -4,6 +4,7 @@ import 'server-only';
 
 import Groq from 'groq-sdk';
 import { z } from 'zod';
+const GROQ_TIMEOUT_MS = 28_000;
 
 const SpreadsheetMessageSchema = z.object({
   role: z.enum(['user', 'assistant']),
@@ -107,16 +108,25 @@ async function runGroqJsonCompletion(
   checked: SpreadsheetAssistantInput,
   maxTokens: number,
 ): Promise<{ content: string; model: string }> {
-  const completion = await groq.chat.completions.create({
-    model,
-    temperature: checked.mode === 'conversation' ? 0.35 : 0.2,
-    max_tokens: maxTokens,
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: buildSystemPrompt(checked) },
-      { role: 'user', content: buildUserPayload(checked) },
-    ],
-  });
+  const completion = (await Promise.race([
+    groq.chat.completions.create({
+      model,
+      stream: false,
+      temperature: checked.mode === 'conversation' ? 0.35 : 0.2,
+      max_tokens: maxTokens,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: buildSystemPrompt(checked) },
+        { role: 'user', content: buildUserPayload(checked) },
+      ],
+    }),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Spreadsheet AI request timed out after ${GROQ_TIMEOUT_MS / 1000} seconds.`)), GROQ_TIMEOUT_MS)
+    ),
+  ])) as Awaited<ReturnType<typeof groq.chat.completions.create>>;
+  if (!('choices' in completion)) {
+    throw new Error('Spreadsheet AI returned an unexpected streaming response.');
+  }
   const content = completion.choices?.[0]?.message?.content ?? '';
   return { content, model };
 }
@@ -224,7 +234,7 @@ export async function spreadsheetAssistant(input: SpreadsheetAssistantInput): Pr
   const checked = SpreadsheetInputSchema.parse(input);
   const groq = getGroqClient();
   const primary = pickModel(checked.mode);
-  const reportTokens = 2800;
+  const reportTokens = 1_600;
   const defaultTokens = checked.mode === 'report' ? reportTokens : 1400;
 
   try {

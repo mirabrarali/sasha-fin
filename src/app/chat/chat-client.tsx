@@ -46,6 +46,22 @@ function isStaleServerActionError(e: unknown): boolean {
   return /failed to find server action/i.test(msg);
 }
 
+const CLIENT_AI_TIMEOUT_MS = 30_000;
+
+async function withClientTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 function cropCanvasSlice(source: HTMLCanvasElement, sourceY: number, sourceH: number): HTMLCanvasElement {
   const out = document.createElement('canvas');
   out.width = source.width;
@@ -267,7 +283,11 @@ export default function ChatPageClient() {
 
       } else {
         const historyForApi = newMessages.map(({ id, analysisReport, financialReport, ...rest }) => rest);
-        const response = await chat({ history: historyForApi, pdfDataUri: pdfData, language });
+        const response = await withClientTimeout(
+          chat({ history: historyForApi, pdfDataUri: pdfData, language }),
+          CLIENT_AI_TIMEOUT_MS,
+          'Chat request exceeded 30 seconds. Please ask a shorter question or retry.'
+        );
         
         const botResponse: Message = {
           id: Date.now().toString(),
@@ -347,7 +367,11 @@ export default function ChatPageClient() {
           description: t('pdfUploadDesc', { fileName }),
         });
 
-        const report = await analyzeFinancialStatement({ pdfDataUri: dataUri, language });
+        const report = await withClientTimeout(
+          analyzeFinancialStatement({ pdfDataUri: dataUri, language }),
+          CLIENT_AI_TIMEOUT_MS,
+          'Document analysis exceeded 30 seconds. Try a smaller file, fewer columns, or retry.'
+        );
         
         const reportMessage: Message = {
           id: Date.now().toString(),
@@ -414,10 +438,14 @@ export default function ChatPageClient() {
       if (lang === language && downloadInfo.report) {
         translatedReport = downloadInfo.report;
       } else if (downloadInfo.type === 'financial' && downloadInfo.inputs.pdfDataUri) {
-        translatedReport = await analyzeFinancialStatement({
-          pdfDataUri: downloadInfo.inputs.pdfDataUri,
-          language: lang,
-        });
+        translatedReport = await withClientTimeout(
+          analyzeFinancialStatement({
+            pdfDataUri: downloadInfo.inputs.pdfDataUri,
+            language: lang,
+          }),
+          CLIENT_AI_TIMEOUT_MS,
+          'Translation + analysis exceeded 30 seconds. Please retry.'
+        );
       } else if (downloadInfo.type === 'loan' && downloadInfo.inputs.loanId) {
         const report = await analyzeLoan({
           loanId: downloadInfo.inputs.loanId,

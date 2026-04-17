@@ -14,16 +14,16 @@ export const FILE_SIZE_LIMITS = {
 // Context/Text Limits (in characters)
 export const CONTEXT_LIMITS = {
     /** Max chars of PDF text injected into chat (unpdf extract; avoid aggressive whitespace stripping) */
-    CHAT_PDF: 50000,
+    CHAT_PDF: 24_000,
     /** Hard cap for entire chat document block (PDF or spreadsheet pack) */
-    CHAT_DOCUMENT_MAX: 120000,
+    CHAT_DOCUMENT_MAX: 45_000,
     /** Max CSV chars per sheet inside structured chat context */
-    CHAT_TABULAR_CSV_PER_SHEET: 55000,
+    CHAT_TABULAR_CSV_PER_SHEET: 18_000,
     /** Records shown as JSON at start / end of each sheet for precise Q&A */
-    CHAT_TABULAR_JSON_FIRST: 45,
-    CHAT_TABULAR_JSON_LAST: 20,
-    FINANCIAL_STATEMENT: 50000, // 50k chars for financial analysis
-    DASHBOARD: 40000, // 40k chars for dashboard generation
+    CHAT_TABULAR_JSON_FIRST: 25,
+    CHAT_TABULAR_JSON_LAST: 12,
+    FINANCIAL_STATEMENT: 18_000, // tighter context for speed on serverless
+    DASHBOARD: 12_000, // keep prompts small for faster responses
     SPREADSHEET: 16000, // excerpt sent with agentic cells / range analysis
 } as const;
 
@@ -37,17 +37,17 @@ export const RETRY_CONFIG = {
 // Request Timeouts (in milliseconds)
 const chatTimeoutFromEnv = Number(process.env.LLM_CHAT_TIMEOUT_MS);
 const chatLlmMs =
-    Number.isFinite(chatTimeoutFromEnv) && chatTimeoutFromEnv >= 10_000 ? chatTimeoutFromEnv : 120_000;
+    Number.isFinite(chatTimeoutFromEnv) && chatTimeoutFromEnv >= 5_000 ? chatTimeoutFromEnv : 30_000;
 
 export const TIMEOUTS = {
-    LLM_REQUEST: 60000, // 60 seconds — short flows (loan, summarize, etc.)
+    LLM_REQUEST: 30_000, // 30 seconds for short LLM flows
     /**
      * Long AI calls: chat (upload + history), financial statement upload analysis, dashboards.
-     * Override with LLM_CHAT_TIMEOUT_MS (ms, min 10000).
+     * Override with LLM_CHAT_TIMEOUT_MS (ms, min 5000).
      */
     LLM_CHAT: chatLlmMs,
-    PDF_EXTRACTION: 30000, // 30 seconds for PDF extraction
-    FILE_UPLOAD: 120000, // 2 minutes for file upload
+    PDF_EXTRACTION: 18_000, // Keep extraction bounded for serverless responsiveness
+    FILE_UPLOAD: 25_000, // Free-tier serverless friendly cap
 } as const;
 
 // Chat History Configuration

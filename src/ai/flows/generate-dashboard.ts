@@ -56,7 +56,8 @@ const GenerateDashboardOutputSchema = z.object({
 });
 export type GenerateDashboardOutput = z.infer<typeof GenerateDashboardOutputSchema>;
 
-const DASHBOARD_MAX_OUTPUT_TOKENS = 12_288;
+const DASHBOARD_MAX_OUTPUT_TOKENS = 2_400;
+const DASHBOARD_TIMEOUT_MS = Math.min(TIMEOUTS.LLM_CHAT, 25_000);
 
 const SYSTEM_PROMPT = `You are a world-class AI data analyst. Analyze the provided data and produce a structured dashboard report.
 
@@ -126,8 +127,9 @@ async function runGenerateDashboard(input: GenerateDashboardInput): Promise<Gene
               prompt,
               output: { schema: GenerateDashboardOutputSchema },
             }),
-            TIMEOUTS.LLM_CHAT
-          )
+            DASHBOARD_TIMEOUT_MS
+          ),
+        { maxAttempts: 1, maxSleepMs: 1_000 }
       );
 
     let result: GenerateDashboardOutput | null = null;
@@ -150,8 +152,9 @@ async function runGenerateDashboard(input: GenerateDashboardInput): Promise<Gene
                 model: defaultModel({ temperature: 0.15, maxOutputTokens: DASHBOARD_MAX_OUTPUT_TOKENS }),
                 prompt: `${prompt}\n\nReturn ONLY valid JSON matching the schema (no markdown fences, no commentary).`,
               }),
-              TIMEOUTS.LLM_CHAT
-            )
+              Math.min(DASHBOARD_TIMEOUT_MS, 12_000)
+            ),
+          { maxAttempts: 1, maxSleepMs: 1_500 }
         );
         result = parseDashboardFromText(textRetry.text ?? '');
       } else {

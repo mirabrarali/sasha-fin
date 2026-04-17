@@ -18,12 +18,13 @@ import { withLLMTimeout, withFileOperationTimeout } from '@/lib/timeout-utils';
 
 const PRIMARY_DOC_CHAR_BUDGET = CONTEXT_LIMITS.FINANCIAL_STATEMENT;
 const FALLBACK_DOC_CHAR_BUDGET = Math.max(10_000, Math.floor(CONTEXT_LIMITS.FINANCIAL_STATEMENT * 0.55));
+const FINANCIAL_TIMEOUT_MS = Math.min(TIMEOUTS.LLM_CHAT, 25_000);
 
 /**
  * Large enough for structured JSON with a long `summary` plus all other keys.
  * Truncation mid-JSON still happens at 8k on verbose HTML summaries; 24k leaves headroom.
  */
-const FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS = 24_576;
+const FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS = 3_200;
 
 const SUMMARY_MAX_CHARS = 2800;
 const TRENDS_MAX_CHARS = 1200;
@@ -286,8 +287,9 @@ async function runAnalyzeFinancialStatement(
                 prompt,
                 output: { schema: AnalyzeFinancialStatementOutputSchema },
               }),
-              TIMEOUTS.LLM_CHAT
-            )
+              FINANCIAL_TIMEOUT_MS
+            ),
+          { maxAttempts: 1, maxSleepMs: 1_000 }
         );
         if (response.output) {
           result = stripNullishMetrics(response.output);
@@ -318,8 +320,9 @@ async function runAnalyzeFinancialStatement(
                       model: defaultModel({ temperature: 0.15, maxOutputTokens: FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS }),
                       prompt: textPrompt,
                     }),
-                    TIMEOUTS.LLM_CHAT
-                  )
+                    Math.min(FINANCIAL_TIMEOUT_MS, 12_000)
+                  ),
+                { maxAttempts: 1, maxSleepMs: 1_500 }
               );
               result = resolveFinancialAnalysisOutput(textRetry.text ?? '');
               break;

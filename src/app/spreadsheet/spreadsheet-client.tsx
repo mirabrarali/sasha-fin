@@ -71,6 +71,7 @@ type RenderedChart = {
 
 const FILE_ACCEPT = '.xlsx,.xls,.csv,.tsv,.txt,.json,.jrn';
 const CHART_COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
+const CLIENT_AI_TIMEOUT_MS = 30_000;
 
 /** Stable layout for html2canvas and PDF export (avoid Chart.js animation frames). */
 const CHART_JS_EXPORT_OPTIONS = {
@@ -79,6 +80,20 @@ const CHART_JS_EXPORT_OPTIONS = {
   animation: false as const,
   plugins: { legend: { display: true } },
 };
+
+async function withClientTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 function normalizeCellValue(v: unknown): string {
   if (v == null) return '';
@@ -464,13 +479,17 @@ export default function SpreadsheetClient() {
     setMessages(nextMessages);
 
     try {
-      const response = await spreadsheetAssistant({
-        language,
-        mode,
-        userRequest,
-        messages: nextMessages,
-        sheet: { name: sheetName, columns, rows },
-      });
+      const response = await withClientTimeout(
+        spreadsheetAssistant({
+          language,
+          mode,
+          userRequest,
+          messages: nextMessages,
+          sheet: { name: sheetName, columns, rows },
+        }),
+        CLIENT_AI_TIMEOUT_MS,
+        'Spreadsheet AI request exceeded 30 seconds. Try a shorter prompt or smaller sheet preview.'
+      );
 
       const cleanedReply = normalizeReplyText(response.reply);
       setMessages((prev) => [...prev, { role: 'assistant', content: cleanedReply }]);

@@ -27,10 +27,25 @@ import { ChatbotStatus } from '@/components/abdullah-status';
 import { cn } from '@/lib/utils';
 import { FILE_SIZE_LIMITS } from '@/lib/constants';
 
-const DA_ALLOWED_FILE = /^.+\.(csv|xlsx|pdf|jrn)$/i;
+const DA_ALLOWED_FILE = /^.+\.(csv|tsv|xlsx|xls|xlsm|pdf|jrn)$/i;
+const CLIENT_AI_TIMEOUT_MS = 30_000;
 
 function isDataAnalyticsFileName(name: string): boolean {
   return DA_ALLOWED_FILE.test(name.trim());
+}
+
+async function withClientTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 const Bar = dynamic(() => import('react-chartjs-2').then(mod => mod.Bar), { ssr: false });
@@ -222,7 +237,7 @@ export default function DataAnalyticsClient() {
       let maxSize = FILE_SIZE_LIMITS.DEFAULT;
       if (lower.endsWith('.pdf')) {
         maxSize = FILE_SIZE_LIMITS.PDF;
-      } else if (lower.endsWith('.csv') || lower.endsWith('.xlsx') || lower.endsWith('.jrn')) {
+      } else if (lower.endsWith('.csv') || lower.endsWith('.tsv') || lower.endsWith('.xlsx') || lower.endsWith('.xls') || lower.endsWith('.xlsm') || lower.endsWith('.jrn')) {
         maxSize = FILE_SIZE_LIMITS.CSV;
       }
 
@@ -246,7 +261,11 @@ export default function DataAnalyticsClient() {
         try {
           const dataUri = event.target?.result as string;
 
-          const result = await generateDashboard({ fileDataUri: dataUri, language });
+          const result = await withClientTimeout(
+            generateDashboard({ fileDataUri: dataUri, language }),
+            CLIENT_AI_TIMEOUT_MS,
+            'Dashboard request exceeded 30 seconds. Please retry with fewer columns or a smaller file.'
+          );
           setDashboardData(result);
         } catch (error: unknown) {
           console.error('Analysis failed:', error);
@@ -310,7 +329,7 @@ export default function DataAnalyticsClient() {
         ref={fileInputRef}
         onChange={handleFileUpload}
         className="hidden"
-        accept=".xlsx,.csv,.pdf,.jrn"
+        accept=".xlsx,.xls,.xlsm,.csv,.tsv,.pdf,.jrn"
       />
       <header className="grid grid-cols-3 items-center p-4 border-b shrink-0 bg-background relative z-50">
         <div className="justify-self-start flex items-center gap-2">
