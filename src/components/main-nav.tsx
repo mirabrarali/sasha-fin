@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MessageCircle, BookOpen, BrainCircuit, BarChart3 } from 'lucide-react';
+import { MessageCircle, BookOpen, BrainCircuit, BarChart3, Table2 } from 'lucide-react';
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from '@/components/ui/sidebar';
 import { useLanguage } from '@/context/language-context';
 
@@ -33,6 +33,14 @@ export function MainNav() {
           <Link href="/data-analytics" onClick={handleLinkClick}>
             <BarChart3 />
             <span>{t('dataAnalyticsTitle')}</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+      <SidebarMenuItem>
+        <SidebarMenuButton asChild isActive={pathname.startsWith('/spreadsheet')}>
+          <Link href="/spreadsheet" onClick={handleLinkClick}>
+            <Table2 />
+            <span>{t('spreadsheetTitle')}</span>
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
