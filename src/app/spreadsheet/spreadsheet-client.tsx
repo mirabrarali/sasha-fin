@@ -72,6 +72,14 @@ type RenderedChart = {
 const FILE_ACCEPT = '.xlsx,.xls,.csv,.tsv,.txt,.json,.jrn';
 const CHART_COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
 
+/** Stable layout for html2canvas and PDF export (avoid Chart.js animation frames). */
+const CHART_JS_EXPORT_OPTIONS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  animation: false as const,
+  plugins: { legend: { display: true } },
+};
+
 function normalizeCellValue(v: unknown): string {
   if (v == null) return '';
   if (typeof v === 'string') return v;
@@ -132,6 +140,7 @@ async function generateAndDownloadPdf(element: HTMLElement, fileName: string): P
     const canvas = await html2canvas(element, {
       scale: 2,
       useCORS: true,
+      logging: false,
       windowWidth: element.scrollWidth,
       windowHeight: element.scrollHeight,
       backgroundColor: '#ffffff',
@@ -408,9 +417,9 @@ export default function SpreadsheetClient() {
     } catch (error) {
       const msg = error instanceof Error ? error.message : t('spreadsheetAiFailedDesc');
       toast({ variant: 'destructive', title: t('spreadsheetAiFailedTitle'), description: msg });
+      return undefined;
     } finally {
       setAiBusy(false);
-      return null;
     }
   };
 
@@ -508,13 +517,13 @@ export default function SpreadsheetClient() {
     const response = await runAssistant('report');
     if (!response) return;
     const usedCharts = ensureChartForReport(response.chartSuggestions ?? []);
-    if (response.reportMarkdown) setReportMarkdown(response.reportMarkdown);
     if (response.chartSuggestions?.length) setChartSuggestions(response.chartSuggestions);
 
     setIsDownloadingReport(true);
-    setTimeout(async () => {
+    const capturePdf = async () => {
       const node = reportRef.current;
       if (!node) {
+        toast({ variant: 'destructive', title: t('spreadsheetReportDownloadFailed'), description: t('spreadsheetReportCaptureMissing') });
         setIsDownloadingReport(false);
         return;
       }
@@ -526,7 +535,15 @@ export default function SpreadsheetClient() {
         toast({ variant: 'destructive', title: t('spreadsheetChartNoData') });
       }
       setIsDownloadingReport(false);
-    }, 420);
+    };
+    // Let React paint the report card and Chart.js finish layout before html2canvas.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.setTimeout(() => {
+          void capturePdf();
+        }, 750);
+      });
+    });
   };
 
   return (
@@ -668,16 +685,20 @@ export default function SpreadsheetClient() {
               </CardContent>
             </Card>
 
-            {reportMarkdown ? (
-              <Card ref={reportRef}>
+            {reportMarkdown.trim().length > 0 || renderedCharts.length > 0 ? (
+              <Card ref={reportRef} className="bg-card">
                 <CardHeader>
                   <CardTitle>{t('spreadsheetGeneratedReport')}</CardTitle>
                   <CardDescription>{isDownloadingReport ? t('spreadsheetReportDownloading') : t('spreadsheetDownloadReportPdf')}</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <pre className="whitespace-pre-wrap text-sm">{reportMarkdown}</pre>
+                <CardContent className="space-y-4">
+                  {reportMarkdown.trim() ? (
+                    <pre className="whitespace-pre-wrap text-sm">{reportMarkdown}</pre>
+                  ) : (
+                    <p className="text-sm text-muted-foreground leading-relaxed">{t('spreadsheetReportEmptyBody')}</p>
+                  )}
                   {renderedCharts.length ? (
-                    <div className="mt-4 space-y-4">
+                    <div className="space-y-4">
                       {renderedCharts.map((cfg) => {
                         const dataPair = buildChartData(rows, cfg);
                         if (!dataPair) return null;
@@ -695,10 +716,10 @@ export default function SpreadsheetClient() {
                         return (
                           <div key={cfg.id} className="space-y-2">
                             <p className="text-sm font-medium">{cfg.title}</p>
-                            <div className="h-[220px] bg-background/60 p-2 rounded-md">
-                              {cfg.type === 'bar' ? <Bar data={chartData} options={{ responsive: true, maintainAspectRatio: false }} /> : null}
-                              {cfg.type === 'line' ? <Line data={chartData} options={{ responsive: true, maintainAspectRatio: false }} /> : null}
-                              {cfg.type === 'pie' ? <Pie data={chartData} options={{ responsive: true, maintainAspectRatio: false }} /> : null}
+                            <div className="h-[240px] w-full min-w-0 bg-background/60 p-2 rounded-md border">
+                              {cfg.type === 'bar' ? <Bar data={chartData} options={CHART_JS_EXPORT_OPTIONS} /> : null}
+                              {cfg.type === 'line' ? <Line data={chartData} options={CHART_JS_EXPORT_OPTIONS} /> : null}
+                              {cfg.type === 'pie' ? <Pie data={chartData} options={CHART_JS_EXPORT_OPTIONS} /> : null}
                             </div>
                           </div>
                         );
@@ -749,9 +770,9 @@ export default function SpreadsheetClient() {
                           {t('spreadsheetUseSuggestion')}
                         </Button>
                         <div className="h-[220px]">
-                          {c.type === 'bar' ? <Bar data={chartData} options={{ responsive: true, maintainAspectRatio: false }} /> : null}
-                          {c.type === 'line' ? <Line data={chartData} options={{ responsive: true, maintainAspectRatio: false }} /> : null}
-                          {c.type === 'pie' ? <Pie data={chartData} options={{ responsive: true, maintainAspectRatio: false }} /> : null}
+                          {c.type === 'bar' ? <Bar data={chartData} options={CHART_JS_EXPORT_OPTIONS} /> : null}
+                          {c.type === 'line' ? <Line data={chartData} options={CHART_JS_EXPORT_OPTIONS} /> : null}
+                          {c.type === 'pie' ? <Pie data={chartData} options={CHART_JS_EXPORT_OPTIONS} /> : null}
                         </div>
                       </div>
                     );

@@ -212,6 +212,7 @@ Rules:
 - The visible "content" must be natural prose only (no JSON or code fences).
 - If user asks for a chart/graph/visualization and data exists, include one chart object.
 - Chart type must be "bar" or "pie" only.
+- For every dataset, data[] length must equal labels[] length (same index = same category).
 
 Knowledge base (highest priority):
 ${knowledgeBase || 'No custom instructions provided.'}

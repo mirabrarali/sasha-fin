@@ -115,7 +115,7 @@ function ChatMessage({
       })}
     >
       {isAssistant && <ChatbotAvatar className="w-8 h-8 shrink-0" />}
-      <div className="max-w-[90%] sm:max-w-[80%] md:max-w-[75%] space-y-2">
+      <div className="max-w-[90%] sm:max-w-[80%] md:max-w-[75%] min-w-0 w-full space-y-2">
         {message.content && (
           <div
             className={cn(
@@ -167,8 +167,6 @@ function ChatMessage({
             </CardContent>
           </Card>
         )}
-        
-        {message.chart && <GeneratedChart chart={message.chart} />}
 
         {message.financialReport && (
           <>
@@ -280,6 +278,8 @@ function ChatMessage({
             </Card>
           </>
         )}
+
+        {message.chart && <GeneratedChart chart={message.chart} />}
       </div>
       {!isAssistant && (
         <Avatar className="w-8 h-8 shrink-0">
@@ -308,6 +308,17 @@ function TypingIndicator() {
 
 function GeneratedChart({ chart }: { chart: NonNullable<Message['chart']> }) {
   const {t} = useLanguage();
+
+  const primaryDataset = chart.data.datasets[0];
+  if (!chart.data.labels.length || !primaryDataset) {
+    return (
+      <Card className="bg-card text-card-foreground">
+        <CardContent className="py-6 text-sm text-muted-foreground">
+          {t('chartDataUnavailable')}
+        </CardContent>
+      </Card>
+    );
+  }
 
   const chartColors = [
     'hsl(var(--chart-1))',
@@ -344,8 +355,9 @@ function GeneratedChart({ chart }: { chart: NonNullable<Message['chart']> }) {
             {chart.title}
           </CardTitle>
         </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={350}>
+      <CardContent className="min-w-0">
+        <div className="h-[min(360px,55vh)] w-full min-w-0" style={{ minHeight: 280 }}>
+          <ResponsiveContainer width="100%" height="100%" minHeight={280}>
           {chart.type === 'bar' ? (
             <RechartsBarChart data={transformedChartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -382,7 +394,7 @@ function GeneratedChart({ chart }: { chart: NonNullable<Message['chart']> }) {
                 labelLine={false}
                 label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                 outerRadius={80}
-                dataKey={chart.data.datasets[0].label}
+                dataKey={primaryDataset.label}
                 nameKey="name"
               >
                 {transformedChartData.map((entry, index) => (
@@ -392,6 +404,7 @@ function GeneratedChart({ chart }: { chart: NonNullable<Message['chart']> }) {
             </RechartsPieChart>
           )}
         </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );

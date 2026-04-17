@@ -69,6 +69,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     revenue: "Revenue",
     netIncome: "Net Income",
     pdfGenerationError: "Could not generate the PDF report.",
+    chartDataUnavailable: 'Chart data from the model was incomplete, so the graph could not be drawn. Try asking again with specific numbers or columns.',
     
     newSessionButton: "New Session",
     newSessionTitle: "New Session Started",
@@ -206,6 +207,10 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     spreadsheetDownloadReportPdf: 'Report is auto-downloaded as PDF with analysis and charts.',
     spreadsheetReportDownloading: 'Generating report PDF...',
     spreadsheetReportDownloadFailed: 'Could not auto-download the report PDF.',
+    spreadsheetReportCaptureMissing:
+      'The report panel did not mount in time. Scroll down to “Generated Report” and use your browser print-to-PDF if needed, or click Generate Report again.',
+    spreadsheetReportEmptyBody:
+      'No narrative text was returned for this run. Charts below still reflect your sheet when numeric columns are detected.',
     spreadsheetChartSuggestions: 'Chart Suggestions',
     spreadsheetChartNoData: 'No numeric data available for this suggestion.',
     spreadsheetPreviewNote: 'Showing first {{shown}} rows out of {{total}} for performance.',
@@ -270,6 +275,7 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     revenue: "الإيرادات",
     netIncome: "صافي الدخل",
     pdfGenerationError: "تعذر إنشاء تقرير PDF.",
+    chartDataUnavailable: 'بيانات الرسم الواردة من النموذج غير مكتملة. حاول مرة أخرى مع أرقام أو أعمدة محددة.',
     
     newSessionButton: "جلسة جديدة",
     newSessionTitle: "بدأت جلسة جديدة",
@@ -407,6 +413,10 @@ const translations: { [key in Language]: { [key: string]: string } } = {
     spreadsheetDownloadReportPdf: 'يتم تنزيل التقرير تلقائيًا كملف PDF مع التحليل والرسوم.',
     spreadsheetReportDownloading: 'جارٍ إنشاء PDF للتقرير...',
     spreadsheetReportDownloadFailed: 'تعذر تنزيل PDF للتقرير تلقائيًا.',
+    spreadsheetReportCaptureMissing:
+      'لم تُحمّل لوحة التقرير في الوقت المناسب. مرّر إلى «التقرير المُنشأ» أو أعد النقر على إنشاء التقرير.',
+    spreadsheetReportEmptyBody:
+      'لم يُرجع النص السردي في هذه المرة. الرسوم أدناه ما زالت تعكس الجدول عند وجود أعمدة رقمية.',
     spreadsheetChartSuggestions: 'اقتراحات الرسوم',
     spreadsheetChartNoData: 'لا توجد بيانات رقمية كافية لهذا الاقتراح.',
     spreadsheetPreviewNote: 'يتم عرض أول {{shown}} صف من أصل {{total}} لتحسين الأداء.',
