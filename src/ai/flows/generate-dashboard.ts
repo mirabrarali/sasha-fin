@@ -5,9 +5,13 @@
  * No longer uses vision models - handles all input files via text extraction
  */
 
-import { ai, defaultModel, defaultRetryMiddleware } from '@/ai/genkit';
+import { ai, defaultModel } from '@/ai/genkit';
 import { extractTextFromFile, cleanText } from '@/lib/pdf-extractor';
-import { isTransientGeminiError, withTransientGeminiRetries } from '@/lib/gemini-transient-retry';
+import {
+  getFriendlyGeminiUnavailableMessage,
+  isTransientGeminiError,
+  withTransientGeminiRetries,
+} from '@/lib/gemini-transient-retry';
 import { z } from 'genkit';
 import { CONTEXT_LIMITS, TIMEOUTS } from '@/lib/constants';
 import { withLLMTimeout, withFileOperationTimeout } from '@/lib/timeout-utils';
@@ -119,7 +123,6 @@ async function runGenerateDashboard(input: GenerateDashboardInput): Promise<Gene
           withLLMTimeout(
             ai.generate({
               model: defaultModel({ temperature: 0.2, maxOutputTokens: DASHBOARD_MAX_OUTPUT_TOKENS }),
-              use: [defaultRetryMiddleware],
               prompt,
               output: { schema: GenerateDashboardOutputSchema },
             }),
@@ -145,7 +148,6 @@ async function runGenerateDashboard(input: GenerateDashboardInput): Promise<Gene
             withLLMTimeout(
               ai.generate({
                 model: defaultModel({ temperature: 0.15, maxOutputTokens: DASHBOARD_MAX_OUTPUT_TOKENS }),
-                use: [defaultRetryMiddleware],
                 prompt: `${prompt}\n\nReturn ONLY valid JSON matching the schema (no markdown fences, no commentary).`,
               }),
               TIMEOUTS.LLM_CHAT
@@ -171,7 +173,7 @@ async function runGenerateDashboard(input: GenerateDashboardInput): Promise<Gene
       throw new Error('Dashboard generation timed out. The file may be too large or complex. Please try a smaller file or try again.');
     }
     if (isTransientGeminiError(error)) {
-      throw new Error('Google Gemini is temporarily unavailable due to high demand. Please wait a minute and try again.');
+      throw new Error(getFriendlyGeminiUnavailableMessage(error));
     }
 
     throw new Error(`Failed to generate dashboard: ${errorMessage}`);

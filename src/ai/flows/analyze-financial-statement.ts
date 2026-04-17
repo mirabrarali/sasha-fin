@@ -5,11 +5,15 @@
  * Uses PDF text extraction instead of vision models
  */
 
-import { ai, defaultModel, defaultRetryMiddleware } from '@/ai/genkit';
+import { ai, defaultModel } from '@/ai/genkit';
 import { extractTextFromFile, cleanText } from '@/lib/pdf-extractor';
 import { z } from 'genkit';
 import { CONTEXT_LIMITS, TIMEOUTS } from '@/lib/constants';
-import { isTransientGeminiError, withTransientGeminiRetries } from '@/lib/gemini-transient-retry';
+import {
+  getFriendlyGeminiUnavailableMessage,
+  isTransientGeminiError,
+  withTransientGeminiRetries,
+} from '@/lib/gemini-transient-retry';
 import { withLLMTimeout, withFileOperationTimeout } from '@/lib/timeout-utils';
 
 const PRIMARY_DOC_CHAR_BUDGET = CONTEXT_LIMITS.FINANCIAL_STATEMENT;
@@ -279,7 +283,6 @@ async function runAnalyzeFinancialStatement(
             withLLMTimeout(
               ai.generate({
                 model: defaultModel({ temperature: 0.2, maxOutputTokens: FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS }),
-                use: [defaultRetryMiddleware],
                 prompt,
                 output: { schema: AnalyzeFinancialStatementOutputSchema },
               }),
@@ -313,7 +316,6 @@ async function runAnalyzeFinancialStatement(
                   withLLMTimeout(
                     ai.generate({
                       model: defaultModel({ temperature: 0.15, maxOutputTokens: FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS }),
-                      use: [defaultRetryMiddleware],
                       prompt: textPrompt,
                     }),
                     TIMEOUTS.LLM_CHAT
@@ -361,9 +363,7 @@ async function runAnalyzeFinancialStatement(
       );
     }
     if (isTransientGeminiError(error)) {
-      throw new Error(
-        'Google Gemini is temporarily unavailable due to high demand. Please wait a minute and try again.'
-      );
+      throw new Error(getFriendlyGeminiUnavailableMessage(error));
     }
     throw new Error(`Failed to analyze financial statement: ${errorMessage}`);
   }
