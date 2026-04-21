@@ -172,7 +172,7 @@ async function runGenerateDashboard(input: GenerateDashboardInput): Promise<Gene
                     prompt: `${prompt}\n\nReturn ONLY valid JSON matching the schema (no markdown fences, no commentary).`,
                   }),
               ),
-              Math.min(DASHBOARD_TIMEOUT_MS, 12_000)
+              DASHBOARD_TIMEOUT_MS
             ),
           { maxAttempts: 2, maxSleepMs: 2_500 }
         );

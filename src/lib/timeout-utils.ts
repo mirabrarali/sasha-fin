@@ -5,12 +5,13 @@
 import { TIMEOUTS } from './constants';
 
 /**
- * Creates a promise that rejects after the specified timeout
+ * Creates a promise that rejects after the specified timeout.
+ * Prefer passing `errorMessage` so callers (e.g. withLLMTimeout) get a consistent user-facing message.
  */
-function createTimeoutPromise(timeoutMs: number): Promise<never> {
+function createTimeoutPromise(timeoutMs: number, errorMessage?: string): Promise<never> {
     return new Promise((_, reject) => {
         setTimeout(() => {
-            reject(new Error(`Operation timed out after ${timeoutMs}ms`));
+            reject(new Error(errorMessage || `Operation timed out after ${timeoutMs}ms`));
         }, timeoutMs);
     });
 }
@@ -26,12 +27,7 @@ export async function withTimeout<T>(
     timeoutMs: number = TIMEOUTS.LLM_REQUEST,
     errorMessage?: string
 ): Promise<T> {
-    return Promise.race([
-        promise,
-        createTimeoutPromise(timeoutMs).then(() => {
-            throw new Error(errorMessage || `Operation timed out after ${timeoutMs}ms`);
-        }),
-    ]);
+    return Promise.race([promise, createTimeoutPromise(timeoutMs, errorMessage)]);
 }
 
 /**

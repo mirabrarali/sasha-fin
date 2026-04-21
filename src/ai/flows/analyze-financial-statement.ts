@@ -346,7 +346,7 @@ async function runAnalyzeFinancialStatement(
                           prompt: textPrompt,
                         }),
                     ),
-                    Math.min(FINANCIAL_TIMEOUT_MS, 12_000)
+                    FINANCIAL_TIMEOUT_MS
                   ),
                 { maxAttempts: 2, maxSleepMs: 2_500 }
               );
