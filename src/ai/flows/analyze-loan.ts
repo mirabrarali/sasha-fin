@@ -54,25 +54,28 @@ async function runAnalyzeLoan(input: AnalyzeLoanInput): Promise<AnalyzeLoanOutpu
       .replace('{csvData}', loanDataCsv)
       .replace('{language}', input.language === 'ar' ? 'Arabic' : 'English');
 
-    const response = await withLLMTimeout(
-      withPrimaryThenFastGemini(
-        'analyze-loan',
-        () =>
+    const response = await withPrimaryThenFastGemini(
+      'analyze-loan',
+      () =>
+        withLLMTimeout(
           ai.generate({
             model: defaultModel({ temperature: 0.15, maxOutputTokens: 800 }),
             use: [defaultRetryMiddleware],
             prompt,
             output: { schema: AnalyzeLoanOutputSchema },
           }),
-        () =>
+          TIMEOUTS.LLM_REQUEST
+        ),
+      () =>
+        withLLMTimeout(
           ai.generate({
             model: fastModel({ temperature: 0.15, maxOutputTokens: 800 }),
             use: [defaultRetryMiddleware],
             prompt,
             output: { schema: AnalyzeLoanOutputSchema },
           }),
-      ),
-      TIMEOUTS.LLM_REQUEST
+          TIMEOUTS.LLM_REQUEST
+        ),
     );
 
     const result = response.output;

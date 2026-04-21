@@ -282,23 +282,26 @@ async function runAnalyzeFinancialStatement(
         const response = await withTransientGeminiRetries(
           'financial-statement structured',
           () =>
-            withLLMTimeout(
-              withPrimaryThenFastGemini(
-                'financial-statement structured',
-                () =>
+            withPrimaryThenFastGemini(
+              'financial-statement structured',
+              () =>
+                withLLMTimeout(
                   ai.generate({
                     model: defaultModel({ temperature: 0.2, maxOutputTokens: FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS }),
                     prompt,
                     output: { schema: AnalyzeFinancialStatementOutputSchema },
                   }),
-                () =>
+                  FINANCIAL_TIMEOUT_MS
+                ),
+              () =>
+                withLLMTimeout(
                   ai.generate({
                     model: fastModel({ temperature: 0.2, maxOutputTokens: FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS }),
                     prompt,
                     output: { schema: AnalyzeFinancialStatementOutputSchema },
                   }),
-              ),
-              FINANCIAL_TIMEOUT_MS
+                  FINANCIAL_TIMEOUT_MS
+                ),
             ),
           { maxAttempts: 2, maxSleepMs: 2_500 }
         );
@@ -326,10 +329,10 @@ async function runAnalyzeFinancialStatement(
               const textRetry = await withTransientGeminiRetries(
                 'financial-statement json-as-text',
                 () =>
-                  withLLMTimeout(
-                    withPrimaryThenFastGemini(
-                      'financial-statement json-as-text',
-                      () =>
+                  withPrimaryThenFastGemini(
+                    'financial-statement json-as-text',
+                    () =>
+                      withLLMTimeout(
                         ai.generate({
                           model: defaultModel({
                             temperature: 0.15,
@@ -337,7 +340,10 @@ async function runAnalyzeFinancialStatement(
                           }),
                           prompt: textPrompt,
                         }),
-                      () =>
+                        FINANCIAL_TIMEOUT_MS
+                      ),
+                    () =>
+                      withLLMTimeout(
                         ai.generate({
                           model: fastModel({
                             temperature: 0.15,
@@ -345,8 +351,8 @@ async function runAnalyzeFinancialStatement(
                           }),
                           prompt: textPrompt,
                         }),
-                    ),
-                    FINANCIAL_TIMEOUT_MS
+                        FINANCIAL_TIMEOUT_MS
+                      ),
                   ),
                 { maxAttempts: 2, maxSleepMs: 2_500 }
               );

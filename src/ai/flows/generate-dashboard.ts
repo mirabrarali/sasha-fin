@@ -122,23 +122,26 @@ async function runGenerateDashboard(input: GenerateDashboardInput): Promise<Gene
       withTransientGeminiRetries(
         'dashboard structured',
         () =>
-          withLLMTimeout(
-            withPrimaryThenFastGemini(
-              'dashboard structured',
-              () =>
+          withPrimaryThenFastGemini(
+            'dashboard structured',
+            () =>
+              withLLMTimeout(
                 ai.generate({
                   model: defaultModel({ temperature: 0.2, maxOutputTokens: DASHBOARD_MAX_OUTPUT_TOKENS }),
                   prompt,
                   output: { schema: GenerateDashboardOutputSchema },
                 }),
-              () =>
+                DASHBOARD_TIMEOUT_MS
+              ),
+            () =>
+              withLLMTimeout(
                 ai.generate({
                   model: fastModel({ temperature: 0.2, maxOutputTokens: DASHBOARD_MAX_OUTPUT_TOKENS }),
                   prompt,
                   output: { schema: GenerateDashboardOutputSchema },
                 }),
-            ),
-            DASHBOARD_TIMEOUT_MS
+                DASHBOARD_TIMEOUT_MS
+              ),
           ),
         { maxAttempts: 2, maxSleepMs: 2_500 }
       );
@@ -158,21 +161,24 @@ async function runGenerateDashboard(input: GenerateDashboardInput): Promise<Gene
         const textRetry = await withTransientGeminiRetries(
           'dashboard json-as-text',
           () =>
-            withLLMTimeout(
-              withPrimaryThenFastGemini(
-                'dashboard json-as-text',
-                () =>
+            withPrimaryThenFastGemini(
+              'dashboard json-as-text',
+              () =>
+                withLLMTimeout(
                   ai.generate({
                     model: defaultModel({ temperature: 0.15, maxOutputTokens: DASHBOARD_MAX_OUTPUT_TOKENS }),
                     prompt: `${prompt}\n\nReturn ONLY valid JSON matching the schema (no markdown fences, no commentary).`,
                   }),
-                () =>
+                  DASHBOARD_TIMEOUT_MS
+                ),
+              () =>
+                withLLMTimeout(
                   ai.generate({
                     model: fastModel({ temperature: 0.15, maxOutputTokens: DASHBOARD_MAX_OUTPUT_TOKENS }),
                     prompt: `${prompt}\n\nReturn ONLY valid JSON matching the schema (no markdown fences, no commentary).`,
                   }),
-              ),
-              DASHBOARD_TIMEOUT_MS
+                  DASHBOARD_TIMEOUT_MS
+                ),
             ),
           { maxAttempts: 2, maxSleepMs: 2_500 }
         );
