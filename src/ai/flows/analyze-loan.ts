@@ -4,9 +4,10 @@
  * @fileOverview Loan Analysis using Genkit + Gemini
  */
 
-import { ai, defaultModel, defaultRetryMiddleware } from '@/ai/genkit';
+import { ai, defaultModel, fastModel, defaultRetryMiddleware } from '@/ai/genkit';
 import { z } from 'genkit';
 import { loanDataCsv } from '@/data/loan_data';
+import { withPrimaryThenFastGemini } from '@/lib/gemini-model-fallback';
 import { withLLMTimeout } from '@/lib/timeout-utils';
 import { TIMEOUTS } from '@/lib/constants';
 
@@ -48,16 +49,29 @@ async function runAnalyzeLoan(input: AnalyzeLoanInput): Promise<AnalyzeLoanOutpu
     }
 
     console.log(`Analyzing loan ${input.loanId}...`);
+    const prompt = SYSTEM_PROMPT
+      .replaceAll('{loanId}', input.loanId)
+      .replace('{csvData}', loanDataCsv)
+      .replace('{language}', input.language === 'ar' ? 'Arabic' : 'English');
+
     const response = await withLLMTimeout(
-      ai.generate({
-        model: defaultModel({ temperature: 0.15, maxOutputTokens: 800 }),
-        use: [defaultRetryMiddleware],
-        prompt: SYSTEM_PROMPT
-          .replaceAll('{loanId}', input.loanId)
-          .replace('{csvData}', loanDataCsv)
-          .replace('{language}', input.language === 'ar' ? 'Arabic' : 'English'),
-        output: { schema: AnalyzeLoanOutputSchema },
-      }),
+      withPrimaryThenFastGemini(
+        'analyze-loan',
+        () =>
+          ai.generate({
+            model: defaultModel({ temperature: 0.15, maxOutputTokens: 800 }),
+            use: [defaultRetryMiddleware],
+            prompt,
+            output: { schema: AnalyzeLoanOutputSchema },
+          }),
+        () =>
+          ai.generate({
+            model: fastModel({ temperature: 0.15, maxOutputTokens: 800 }),
+            use: [defaultRetryMiddleware],
+            prompt,
+            output: { schema: AnalyzeLoanOutputSchema },
+          }),
+      ),
       TIMEOUTS.LLM_REQUEST
     );
 

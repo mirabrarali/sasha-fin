@@ -5,7 +5,7 @@
  * No longer uses vision models - handles all input files via text extraction
  */
 
-import { ai, defaultModel } from '@/ai/genkit';
+import { ai, defaultModel, fastModel } from '@/ai/genkit';
 import { extractTextFromFile, cleanText } from '@/lib/pdf-extractor';
 import {
   getFriendlyGeminiUnavailableMessage,
@@ -14,6 +14,7 @@ import {
 } from '@/lib/gemini-transient-retry';
 import { z } from 'genkit';
 import { CONTEXT_LIMITS, TIMEOUTS } from '@/lib/constants';
+import { withPrimaryThenFastGemini } from '@/lib/gemini-model-fallback';
 import { withLLMTimeout, withFileOperationTimeout } from '@/lib/timeout-utils';
 
 const GenerateDashboardInputSchema = z.object({
@@ -122,14 +123,24 @@ async function runGenerateDashboard(input: GenerateDashboardInput): Promise<Gene
         'dashboard structured',
         () =>
           withLLMTimeout(
-            ai.generate({
-              model: defaultModel({ temperature: 0.2, maxOutputTokens: DASHBOARD_MAX_OUTPUT_TOKENS }),
-              prompt,
-              output: { schema: GenerateDashboardOutputSchema },
-            }),
+            withPrimaryThenFastGemini(
+              'dashboard structured',
+              () =>
+                ai.generate({
+                  model: defaultModel({ temperature: 0.2, maxOutputTokens: DASHBOARD_MAX_OUTPUT_TOKENS }),
+                  prompt,
+                  output: { schema: GenerateDashboardOutputSchema },
+                }),
+              () =>
+                ai.generate({
+                  model: fastModel({ temperature: 0.2, maxOutputTokens: DASHBOARD_MAX_OUTPUT_TOKENS }),
+                  prompt,
+                  output: { schema: GenerateDashboardOutputSchema },
+                }),
+            ),
             DASHBOARD_TIMEOUT_MS
           ),
-        { maxAttempts: 1, maxSleepMs: 1_000 }
+        { maxAttempts: 2, maxSleepMs: 2_500 }
       );
 
     let result: GenerateDashboardOutput | null = null;
@@ -148,13 +159,22 @@ async function runGenerateDashboard(input: GenerateDashboardInput): Promise<Gene
           'dashboard json-as-text',
           () =>
             withLLMTimeout(
-              ai.generate({
-                model: defaultModel({ temperature: 0.15, maxOutputTokens: DASHBOARD_MAX_OUTPUT_TOKENS }),
-                prompt: `${prompt}\n\nReturn ONLY valid JSON matching the schema (no markdown fences, no commentary).`,
-              }),
+              withPrimaryThenFastGemini(
+                'dashboard json-as-text',
+                () =>
+                  ai.generate({
+                    model: defaultModel({ temperature: 0.15, maxOutputTokens: DASHBOARD_MAX_OUTPUT_TOKENS }),
+                    prompt: `${prompt}\n\nReturn ONLY valid JSON matching the schema (no markdown fences, no commentary).`,
+                  }),
+                () =>
+                  ai.generate({
+                    model: fastModel({ temperature: 0.15, maxOutputTokens: DASHBOARD_MAX_OUTPUT_TOKENS }),
+                    prompt: `${prompt}\n\nReturn ONLY valid JSON matching the schema (no markdown fences, no commentary).`,
+                  }),
+              ),
               Math.min(DASHBOARD_TIMEOUT_MS, 12_000)
             ),
-          { maxAttempts: 1, maxSleepMs: 1_500 }
+          { maxAttempts: 2, maxSleepMs: 2_500 }
         );
         result = parseDashboardFromText(textRetry.text ?? '');
       } else {

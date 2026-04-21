@@ -5,7 +5,7 @@
  * Uses PDF text extraction instead of vision models
  */
 
-import { ai, defaultModel } from '@/ai/genkit';
+import { ai, defaultModel, fastModel } from '@/ai/genkit';
 import { extractTextFromFile, cleanText } from '@/lib/pdf-extractor';
 import { z } from 'genkit';
 import { CONTEXT_LIMITS, TIMEOUTS } from '@/lib/constants';
@@ -14,6 +14,7 @@ import {
   isTransientGeminiError,
   withTransientGeminiRetries,
 } from '@/lib/gemini-transient-retry';
+import { withPrimaryThenFastGemini } from '@/lib/gemini-model-fallback';
 import { withLLMTimeout, withFileOperationTimeout } from '@/lib/timeout-utils';
 
 const PRIMARY_DOC_CHAR_BUDGET = CONTEXT_LIMITS.FINANCIAL_STATEMENT;
@@ -282,14 +283,24 @@ async function runAnalyzeFinancialStatement(
           'financial-statement structured',
           () =>
             withLLMTimeout(
-              ai.generate({
-                model: defaultModel({ temperature: 0.2, maxOutputTokens: FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS }),
-                prompt,
-                output: { schema: AnalyzeFinancialStatementOutputSchema },
-              }),
+              withPrimaryThenFastGemini(
+                'financial-statement structured',
+                () =>
+                  ai.generate({
+                    model: defaultModel({ temperature: 0.2, maxOutputTokens: FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS }),
+                    prompt,
+                    output: { schema: AnalyzeFinancialStatementOutputSchema },
+                  }),
+                () =>
+                  ai.generate({
+                    model: fastModel({ temperature: 0.2, maxOutputTokens: FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS }),
+                    prompt,
+                    output: { schema: AnalyzeFinancialStatementOutputSchema },
+                  }),
+              ),
               FINANCIAL_TIMEOUT_MS
             ),
-          { maxAttempts: 1, maxSleepMs: 1_000 }
+          { maxAttempts: 2, maxSleepMs: 2_500 }
         );
         if (response.output) {
           result = stripNullishMetrics(response.output);
@@ -316,13 +327,28 @@ async function runAnalyzeFinancialStatement(
                 'financial-statement json-as-text',
                 () =>
                   withLLMTimeout(
-                    ai.generate({
-                      model: defaultModel({ temperature: 0.15, maxOutputTokens: FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS }),
-                      prompt: textPrompt,
-                    }),
+                    withPrimaryThenFastGemini(
+                      'financial-statement json-as-text',
+                      () =>
+                        ai.generate({
+                          model: defaultModel({
+                            temperature: 0.15,
+                            maxOutputTokens: FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS,
+                          }),
+                          prompt: textPrompt,
+                        }),
+                      () =>
+                        ai.generate({
+                          model: fastModel({
+                            temperature: 0.15,
+                            maxOutputTokens: FINANCIAL_ANALYSIS_MAX_OUTPUT_TOKENS,
+                          }),
+                          prompt: textPrompt,
+                        }),
+                    ),
                     Math.min(FINANCIAL_TIMEOUT_MS, 12_000)
                   ),
-                { maxAttempts: 1, maxSleepMs: 1_500 }
+                { maxAttempts: 2, maxSleepMs: 2_500 }
               );
               result = resolveFinancialAnalysisOutput(textRetry.text ?? '');
               break;
